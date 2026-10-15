@@ -16,9 +16,8 @@ import { BetssonPage } from '../pages/BetssonPage';
 import { PragmaticOracle } from '../oracle/pragmatic';
 import { GamePlayer } from '../game/GamePlayer';
 import { findGameFrame, GameView } from '../vision/capture';
-import { waitForMotion, waitForStable } from '../vision/frameDiff';
 import { annotate, type Mark } from '../vision/annotate';
-import { currencyMatches, reconcile, spinCompleted, spinStarted, wagerMatches } from '../checks/reconcile';
+import { applyFault, evaluateSpin, extractFacts, FAULT_DESCRIPTION, observeSpin } from '../scenarios/spin';
 import { formatCents } from '../util/money';
 import { renderReport } from './report';
 
@@ -59,10 +58,6 @@ export interface SessionOptions {
   fault?: boolean;
 }
 
-/** Overcharge simulated in forced-failure mode: the provider takes 0,10 more than the wager shown. */
-const FAULT_OVERCHARGE_CENTS = 10;
-export const FAULT_DESCRIPTION =
-  'MODO FALLOS FORZADOS (demostración): el juego es real, pero se simula una integración rota: el mercado espera otra moneda y el proveedor cobra 0,10 más de la apuesta mostrada.';
 
 export interface CheckRow {
   spin: number;
@@ -122,8 +117,6 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
   const money = (c?: number) => (c === undefined ? 'n/a' : formatCents(c, market));
   const marketLabel = isBetsson ? market.name : `Demo · ${market.language.toUpperCase()}/${market.currency.code}`;
   const fault = !!(opts.fault ?? alias?.fault);
-  // In forced-failure mode the market "expects" the other currency.
-  const expectedCurrency = fault ? (market.currency.code === 'EUR' ? 'PEN' : 'EUR') : market.currency.code;
 
   const startedAt = now();
   const id = `fun-${startedAt.replace(/[:.]/g, '-')}`;
@@ -251,87 +244,43 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
 
     for (let i = 1; i <= spins; i++) {
       say(`— Giro ${i}/${spins} —`);
-      const netBefore = oracle.lastBalanceCents();
-      const netBet = oracle.currentBetCents();
-      const pre = await player.readStateConfirming([netBefore, netBet]);
-      const seenBet = player.seen(pre, netBet) ?? pre.bet;
-      const seenBal = player.seen(pre, netBefore) ?? pre.balance;
-      say(`Lectura en pantalla (OCR): saldo ${money(seenBal?.token.cents)} · apuesta ${money(seenBet?.token.cents)} · moneda ${pre.currencies.join(',') || '-'}`);
-      say(`Red del proveedor: saldo ${money(netBefore)} · apuesta ${money(netBet)} · ${oracle.detected ? 'Pragmatic detectado' : 'proveedor no detectado'}`);
+      const obs = await observeSpin(player, oracle, {
+        firstFrame: i === 1 ? ready : undefined,
+        beforePress: async ({ pre, target, netBalanceBefore, netBet }) => {
+          const bet = player.seen(pre, netBet) ?? pre.bet;
+          const bal = player.seen(pre, netBalanceBefore) ?? pre.balance;
+          say(`Lectura en pantalla (OCR): saldo ${money(bal?.token.cents)} · apuesta ${money(bet?.token.cents)} · moneda ${pre.currencies.join(',') || '-'}`);
+          say(`Red del proveedor: saldo ${money(netBalanceBefore)} · apuesta ${money(netBet)} · ${oracle!.detected ? 'Pragmatic detectado' : 'proveedor no detectado'}`);
+          const marks: Mark[] = [];
+          if (bal) marks.push({ box: bal.line.bbox, label: `SALDO ${money(bal.token.cents)}` });
+          if (bet) marks.push({ box: bet.line.bbox, label: `APUESTA ${money(bet.token.cents)}` });
+          if (target.box) marks.push({ box: target.box, label: `SPIN (${target.method})` });
+          save(`spin${i}-before`, `Giro ${i} · antes (lo que se ha leído y dónde está Spin)`, await annotate(pre.png, marks, `Antes del giro ${i}`), i);
+          say(`Spin localizado por ${target.method}${target.center ? ` en (${Math.round(target.center.x)}, ${Math.round(target.center.y)})` : ' (tecla Espacio)'}`);
+        },
+        afterMotion: (motion) => {
+          if (motion.peakFrame) save(`spin${i}-moving`, `Giro ${i} · rodillos en movimiento (${(motion.peakRatio * 100).toFixed(1)}% de píxeles cambiados)`, motion.peakFrame, i);
+          say(`Movimiento detectado: pico ${(motion.peakRatio * 100).toFixed(1)}% de píxeles a los ${motion.elapsedMs} ms`);
+        },
+      });
 
-      const target = await player.locateSpin(pre.png);
-      const marks: Mark[] = [];
-      if (seenBal) marks.push({ box: seenBal.line.bbox, label: `SALDO ${money(seenBal.token.cents)}` });
-      if (seenBet) marks.push({ box: seenBet.line.bbox, label: `APUESTA ${money(seenBet.token.cents)}` });
-      if (target.box) marks.push({ box: target.box, label: `SPIN (${target.method})` });
-      save(`spin${i}-before`, `Giro ${i} · antes (lo que se ha leído y dónde está Spin)`, await annotate(pre.png, marks, `Antes del giro ${i}`), i);
-      say(`Spin localizado por ${target.method}${target.center ? ` en (${Math.round(target.center.x)}, ${Math.round(target.center.y)})` : ' (tecla Espacio)'}`);
-
-      const marker = oracle.mark();
-      const baseline = await player.grab();
-      await player.pressSpin(target);
-      const motion = await waitForMotion(player.grab, baseline, { minRatio: player.assets.motionMinRatio, timeoutMs: 6000 });
-      if (motion.peakFrame) save(`spin${i}-moving`, `Giro ${i} · rodillos en movimiento (${(motion.peakRatio * 100).toFixed(1)}% de píxeles cambiados)`, motion.peakFrame, i);
-      say(`Movimiento detectado: pico ${(motion.peakRatio * 100).toFixed(1)}% de píxeles a los ${motion.elapsedMs} ms`);
-      const settled = oracle.detected ? await oracle.waitForSettled(marker, 60_000) : undefined;
-      const stable = await waitForStable(player.grab, { stableMs: 2500, timeoutMs: 60_000, maxRatio: player.assets.stableMaxRatio });
-      const spin = oracle.summarizeSince(marker);
-      const post = await player.readStateConfirming([spin.balanceAfterCents, spin.winCents || undefined], 3, stable.frame);
-
-      const realBet = spin.betCents ?? seenBet?.token.cents;
-      const payout = spin.winCents ?? post.win?.token.cents ?? 0;
-      const before = netBefore ?? seenBal?.token.cents;
-      const realAfter = spin.balanceAfterCents ?? post.balance?.token.cents;
-      // Forced-failure mode: the provider "charged" more than the wager shown, so the
-      // wager used and the resulting balance differ from what the player was told.
-      const bet = fault && realBet !== undefined ? realBet + FAULT_OVERCHARGE_CENTS : realBet;
-      const after = fault && realAfter !== undefined ? realAfter - FAULT_OVERCHARGE_CENTS : realAfter;
-      const shownBet = seenBet?.token.cents ?? realBet;
-      const afterSeen = player.seen(post, after) ?? post.balance;
-      // The player expects: balance before − the wager they saw + the win.
-      const inGame = reconcile(before, fault ? shownBet : bet, payout, after);
+      const real = extractFacts(obs, market);
+      const facts = fault ? applyFault(real, obs, market) : real;
+      const results = evaluateSpin(facts, market);
+      const balanceCheck = results.find((c) => c.id === 'S1.ingame-balance');
+      const afterHit = facts.hits.balanceAfter;
       save(
         `spin${i}-after`,
-        `Giro ${i} · después (premio ${money(payout)})`,
+        `Giro ${i} · después (premio ${money(facts.payout)})`,
         await annotate(
-          post.png,
-          afterSeen ? [{ box: afterSeen.line.bbox, label: `SALDO ${money(afterSeen.token.cents)}`, ok: afterSeen.token.cents === inGame.expected }] : [],
-          `Después · premio ${money(payout)}`,
+          obs.post.png,
+          afterHit ? [{ box: afterHit.line.bbox, label: `SALDO ${money(afterHit.token.cents)}`, ok: !!balanceCheck?.pass }] : [],
+          `Después · premio ${money(facts.payout)}`,
         ),
         i,
       );
-
-      check({ spin: i, check: 'Moneda en el juego', pass: currencyMatches(pre.currencies, expectedCurrency), expected: expectedCurrency, actual: pre.currencies.join(',') || 'ninguna leída' });
-      check({
-        spin: i,
-        check: 'El giro empezó (la pantalla reaccionó)',
-        pass: spinStarted({ screenMoved: motion.moved, oracleDetected: oracle.detected, spinRequested: spin.requested }),
-        expected: 'movimiento' + (oracle.detected ? ' + doSpin' : ''),
-        actual: `${(motion.peakRatio * 100).toFixed(1)}%` + (oracle.detected ? `, doSpin ${spin.requested ? 'sí' : 'no'}` : ''),
-      });
-      check({
-        spin: i,
-        check: 'El giro terminó',
-        pass: spinCompleted({ started: motion.moved, screenStill: stable.stable, roundSettled: settled }),
-        expected: 'pantalla quieta' + (oracle.detected ? ' + ronda cerrada' : ''),
-        actual: `${stable.stable ? 'quieta' : 'en movimiento'} tras ${stable.elapsedMs} ms` + (oracle.detected ? `, ronda ${settled ? 'cerrada' : 'abierta'}` : ''),
-      });
-      check({ spin: i, check: 'Apuesta mostrada = apuesta usada', pass: wagerMatches(seenBet?.token.cents, bet), expected: money(seenBet?.token.cents), actual: money(bet) });
-      check({
-        spin: i,
-        check: 'Saldo en juego = antes − apuesta + premio',
-        pass: inGame.pass,
-        expected: `${money(before)} − ${money(fault ? shownBet : bet)} + ${money(payout)} = ${money(inGame.expected)}`,
-        actual: money(after),
-      });
-      check({
-        spin: i,
-        check: 'El saldo nuevo se ve en pantalla',
-        pass: after !== undefined ? !!player.seen(post, after) : !!post.balance,
-        expected: money(after),
-        actual: afterSeen ? `${money(afterSeen.token.cents)} leído por OCR` : 'no encontrado por OCR',
-      });
-      fs.writeFileSync(path.join(out, `spin${i}-network.json`), JSON.stringify(spin, null, 2));
+      for (const c of results) check({ spin: i, check: c.title, pass: c.pass, expected: c.expected, actual: c.actual });
+      fs.writeFileSync(path.join(out, `spin${i}-network.json`), JSON.stringify(obs.network, null, 2));
     }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);

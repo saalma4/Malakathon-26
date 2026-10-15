@@ -1,4 +1,5 @@
-import { FAULT_DESCRIPTION, type SessionResult } from './session';
+import type { SessionResult } from './session';
+import { FAULT_DESCRIPTION } from '../scenarios/spin';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
