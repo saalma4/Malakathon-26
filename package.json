@@ -14,7 +14,8 @@
     "replay": "tsx scripts/replay.ts",
     "fun": "tsx scripts/play-fun.ts",
     "calibrate": "tsx scripts/calibrate.ts",
-    "make-template": "tsx scripts/make-template.ts"
+    "make-template": "tsx scripts/make-template.ts",
+    "ui": "tsx scripts/ui-server.ts"
   },
   "repository": {
     "type": "git",

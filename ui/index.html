@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game Validator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◎</span>
+      <div>
+        <h1>Game Validator</h1>
+        <p>Valida un juego de casino como lo ve un jugador</p>
+      </div>
+    </div>
+    <form id="run-form" class="controls">
+      <label>Juego
+        <select id="target"></select>
+      </label>
+      <label id="url-field" class="hidden">URL
+        <input id="url" type="url" placeholder="https://…" autocomplete="off">
+      </label>
+      <label id="game-field" class="hidden">Clave del juego
+        <input id="game" type="text" placeholder="sweet-bonanza" autocomplete="off">
+      </label>
+      <label>Giros
+        <input id="spins" type="number" min="1" max="10" value="1">
+      </label>
+      <button id="play" type="submit" class="play"><span aria-hidden="true">▶</span> Play</button>
+    </form>
+  </header>
+
+  <div class="layout">
+    <aside class="history">
+      <h2>Historial</h2>
+      <ul id="history"><li class="muted">Sin ejecuciones todavía.</li></ul>
+    </aside>
+
+    <main>
+      <section id="banner" class="banner idle">
+        <div>
+          <h2 id="banner-title">Pulsa ▶ Play para empezar</h2>
+          <p id="banner-meta">El programa abrirá el juego, buscará el botón Spin en pantalla, girará y comprobará que todo cuadra.</p>
+        </div>
+        <div class="counters">
+          <div class="counter pass"><b id="count-pass">0</b><span>OK</span></div>
+          <div class="counter fail"><b id="count-fail">0</b><span>Fallos</span></div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="card live">
+          <div class="card-head">
+            <h2>Vista en directo</h2>
+            <span id="live-badge" class="badge">en espera</span>
+          </div>
+          <div class="screen">
+            <img id="live" alt="Vista en directo del juego">
+            <div id="screen-empty" class="screen-empty">Aquí verás el juego mientras se prueba</div>
+            <div id="status" class="status hidden"><span class="spinner"></span><span id="status-text"></span></div>
+          </div>
+          <div id="result-links" class="links hidden"></div>
+        </section>
+
+        <section class="card checks">
+          <div class="card-head">
+            <h2>Comprobaciones</h2>
+            <span id="checks-progress" class="muted"></span>
+          </div>
+          <div id="checks"><p class="muted">Las comprobaciones aparecerán aquí según se hagan.</p></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Capturas</h2>
+          <span id="shots-count" class="muted"></span>
+        </div>
+        <div id="shots" class="shots"><p class="muted">Cada captura que tome el programa aparecerá aquí, con lo que ha leído marcado encima.</p></div>
+      </section>
+
+      <div class="grid">
+        <section id="video-card" class="card hidden">
+          <div class="card-head"><h2>Vídeo de la sesión</h2></div>
+          <video id="video" controls preload="metadata"></video>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>Pasos</h2></div>
+          <ol id="steps" class="steps"><li class="muted">—</li></ol>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Captura ampliada">
+    <button class="lb-close" aria-label="Cerrar">✕</button>
+    <button class="lb-prev" aria-label="Anterior">‹</button>
+    <figure>
+      <img id="lb-img" alt="">
+      <figcaption id="lb-caption"></figcaption>
+    </figure>
+    <button class="lb-next" aria-label="Siguiente">›</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
