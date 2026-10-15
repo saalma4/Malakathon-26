@@ -32,6 +32,15 @@ test.describe('money', () => {
     expect(containsAmount('SALDO S/ 50.00', 5000, MARKETS.pe)).toBe(true);
   });
 
+  test('a space is a thousands separator only in markets that use it', () => {
+    // OCR glues "x2" to the amount: in an EUR market that must not become 2.100.000,00.
+    const glued = extractAmounts('x2 100.000,00 €', MARKETS.es).map((t) => t.cents);
+    expect(glued).toEqual([200, 10000000]);
+    expect(extractAmounts('x2 100 000,00 €', MARKETS.es).map((t) => t.cents)).not.toContain(210000000);
+    const spaced = { ...MARKETS.es, numberFormat: { decimal: ',' as const, thousands: ' ' as const } };
+    expect(extractAmounts('1 234,56 €', spaced).map((t) => t.cents)).toEqual([123456]);
+  });
+
   test('detects currencies', () => {
     expect(currenciesIn('Saldo S/ 10.00')).toEqual(['PEN']);
     expect(currenciesIn('€10 or 10 EUR')).toEqual(['EUR']);

@@ -1,7 +1,7 @@
 import type { SessionResult } from './session';
+import { escapeHtml as esc } from '../util/html';
 import { FAULT_DESCRIPTION } from '../scenarios/spin';
 
-const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 /**
  * Self-contained HTML report for one session. Images and video are referenced

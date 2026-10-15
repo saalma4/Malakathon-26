@@ -52,6 +52,15 @@ test.describe('pragmatic oracle', () => {
     expect(s).toMatchObject({ settled: true, betCents: 200, winCents: 180, balanceAfterCents: 9999980, payoutCents: 180 });
   });
 
+  test('events are evaluated in arrival order even if stored out of order', () => {
+    const events = [
+      ev(2, 'doCollect', 'action=doCollect', 'balance=101.30&na=s'),
+      ev(0, 'doInit', 'action=doInit', 'balance=100.00&na=s'),
+      ev(1, 'doSpin', 'action=doSpin&c=0.01&l=20', 'tw=1.50&balance=99.80&na=c'),
+    ].sort((a, b) => a.seq - b.seq);
+    expect(summarizeSpin(events, 1, 10000)).toMatchObject({ settled: true, balanceAfterCents: 10130 });
+  });
+
   test('rejected spin', () => {
     const events = [ev(5, 'doSpin', 'action=doSpin&c=0.01&l=20', 'frozen=Internal server error&msg_code=11')];
     const s = summarizeSpin(events, 5, 0);

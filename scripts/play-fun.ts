@@ -15,22 +15,27 @@
  * result.json and report.html.
  */
 import path from 'node:path';
-import type { MarketId } from '../src/config/markets';
+import { MARKETS, type MarketId } from '../src/config/markets';
 import { runSession, RUNS_DIR } from '../src/runner/session';
 import { terminateOcr } from '../src/vision/ocr';
+import { boolFlag, intFlag, parseArgs, stringFlag } from '../src/util/cli';
 
-const args = process.argv.slice(2);
-const flag = (name: string) => args.find((a) => a.startsWith(`--${name}`))?.split('=')[1] ?? (args.includes(`--${name}`) ? 'true' : undefined);
+const args = parseArgs(process.argv.slice(2));
+
+function marketArg(id: string): MarketId {
+  if (!(id in MARKETS)) throw new Error(`--market debe ser uno de: ${Object.keys(MARKETS).join(', ')}`);
+  return id as MarketId;
+}
 
 async function main() {
   const result = await runSession(
     {
-      target: args.find((a) => !a.startsWith('--')) ?? 'betsson',
-      spins: Number(flag('spins') ?? 1),
-      market: (flag('market') ?? 'es') as MarketId,
-      game: flag('game'),
-      headless: flag('headless') === 'true',
-      fault: flag('fault') === 'true' ? true : undefined,
+      target: args.positional[0] ?? 'betsson',
+      spins: intFlag(args, 'spins', 1, 1, 10),
+      market: marketArg(stringFlag(args, 'market') ?? 'es'),
+      game: stringFlag(args, 'game'),
+      headless: boolFlag(args, 'headless'),
+      fault: boolFlag(args, 'fault') || undefined,
     },
     (e) => {
       if (e.type === 'step') console.log(e.text.startsWith('ERROR') ? `\x1b[31m✘ ${e.text.slice(7)}\x1b[0m` : `\x1b[36m▸\x1b[0m ${e.text}`);

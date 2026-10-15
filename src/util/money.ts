@@ -66,13 +66,17 @@ export function normaliseOcr(text: string): string {
     .replace(/[‚]/g, ',');
 }
 
-const AMOUNT_RE = /\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g;
+/** Amount pattern; a space only counts as a thousands separator in markets that use it ("1 234,56"). */
+function amountRegex(format: NumberFormat): RegExp {
+  const sep = format.thousands === ' ' ? '[.,\\s]' : '[.,]';
+  return new RegExp(`\\d{1,3}(?:${sep}\\d{3})*(?:[.,]\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?`, 'g');
+}
 
 /** Extracts every amount in a text, with the currency symbol found right before or after it. */
 export function extractAmounts(text: string, market: Market): MoneyToken[] {
   const norm = normaliseOcr(text);
   const out: MoneyToken[] = [];
-  for (const m of norm.matchAll(AMOUNT_RE)) {
+  for (const m of norm.matchAll(amountRegex(market.numberFormat))) {
     const raw = m[0].trim();
     const cents = parseAmount(raw, market.numberFormat);
     if (cents === undefined) continue;

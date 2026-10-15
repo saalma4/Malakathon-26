@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 import { CHECKS_ATTACHMENT, type CheckResult } from '../checks/CheckRecorder';
+import { escapeHtml as esc } from '../util/html';
 
 interface Row {
   market: string;
@@ -33,9 +34,10 @@ export default class SummaryReporter implements Reporter {
       /* no checks: test failed before recording any */
     }
     // Retries: keep the last attempt only.
-    this.rows = this.rows.filter((r) => !(r.market === project && r.scenario === test.title));
+    const market = project.replace('betsson-', 'betsson.');
+    this.rows = this.rows.filter((r) => !(r.market === market && r.scenario === test.title));
     this.rows.push({
-      market: project.replace('betsson-', 'betsson.'),
+      market,
       scenario: test.title,
       status: result.status,
       error:
@@ -117,5 +119,4 @@ ${sections}</body></html>`;
   }
 }
 
-const esc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const cell = (s: string) => String(s).replace(/\|/g, '\\|').replace(/\n/g, ' ');

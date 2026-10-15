@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { credentialsFor, getMarket, type Market, type MarketId } from '../config/markets';
+import { credentialsFor, getMarket, proxyFor, type Market, type MarketId } from '../config/markets';
 import { BetssonPage } from '../pages/BetssonPage';
 import { PragmaticOracle } from '../oracle/pragmatic';
 import { GamePlayer } from '../game/GamePlayer';
@@ -113,7 +113,9 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
   const market: Market = { ...baseMarket, gameKey: opts.game ?? alias?.game ?? baseMarket.gameKey };
   const spins = Math.max(1, Math.min(10, opts.spins ?? 1));
   const headless = opts.headless ?? true;
-  const isBetsson = new URL(url).hostname.endsWith(new URL(market.baseUrl).hostname.replace(/^www\./, ''));
+  const host = new URL(url).hostname;
+  const betssonHost = new URL(market.baseUrl).hostname.replace(/^www\./, '');
+  const isBetsson = host === betssonHost || host.endsWith(`.${betssonHost}`);
   const money = (c?: number) => (c === undefined ? 'n/a' : formatCents(c, market));
   const marketLabel = isBetsson ? market.name : `Demo · ${market.language.toUpperCase()}/${market.currency.code}`;
   const fault = !!(opts.fault ?? alias?.fault);
@@ -145,7 +147,9 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
     emit({ type: 'check', ...row, at: now() });
   };
 
-  const contextOptions = { viewport: { width: 1440, height: 900 }, locale: market.locale, timezoneId: market.timezoneId };
+  // Betsson markets may need a proxy (geo-blocking); provider demos don't.
+  const proxy = isBetsson ? proxyFor(market.id) : undefined;
+  const contextOptions = { viewport: { width: 1440, height: 900 }, locale: market.locale, timezoneId: market.timezoneId, proxy };
 
   /**
    * Betsson login with no recording at all. Only this short phase uses the

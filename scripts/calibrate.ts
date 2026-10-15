@@ -14,11 +14,12 @@ import { GamePlayer } from '../src/game/GamePlayer';
 import { findGameFrame, GameView } from '../src/vision/capture';
 import { longestMotionRunMs, observeMotion } from '../src/vision/frameDiff';
 import { terminateOcr } from '../src/vision/ocr';
+import { boolFlag, parseArgs, stringFlag } from '../src/util/cli';
 
 const DEMO = 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20fruitsw&lang=es&cur=EUR&jurisdiction=99&stylename=generic';
-const args = process.argv.slice(2);
-const flag = (n: string) => args.find((a) => a.startsWith(`--${n}=`))?.split('=')[1];
-const pos = args.find((a) => !a.startsWith('--')) ?? 'demo';
+const args = parseArgs(process.argv.slice(2));
+const flag = (n: string) => stringFlag(args, n);
+const pos = args.positional[0] ?? 'demo';
 const url = pos === 'demo' ? DEMO : pos;
 const base = getMarket((flag('market') ?? 'es') as MarketId);
 const market = { ...base, gameKey: flag('game') ?? (pos === 'demo' ? 'sweet-bonanza' : base.gameKey) };
@@ -27,7 +28,7 @@ const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
 const q = (xs: number[], p: number) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(p * xs.length))] ?? 0;
 
 async function main() {
-  const browser = await chromium.launch({ channel: 'chromium', headless: args.includes('--headless') });
+  const browser = await chromium.launch({ channel: 'chromium', headless: boolFlag(args, 'headless') });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, locale: market.locale });
   const oracle = new PragmaticOracle().attach(page);
   try {

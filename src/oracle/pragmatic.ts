@@ -84,6 +84,10 @@ export class PragmaticOracle {
     if (!isGameServiceUrl(r.url())) return;
     const req = r.request();
     const request = parseQs(req.postData() ?? new URL(r.url()).search.slice(1));
+    // Number the event when the response arrives, not after its body is read: a slow body must not
+    // land in a round that was marked after it.
+    const seq = this.seq++;
+    const at = Date.now();
     let body = '';
     try {
       body = await r.text();
@@ -91,8 +95,8 @@ export class PragmaticOracle {
       /* frame navigated away */
     }
     this.events.push({
-      at: Date.now(),
-      seq: this.seq++,
+      at,
+      seq,
       url: r.url().split('?')[0],
       action: request.action ?? 'unknown',
       request: sanitize(request),
@@ -111,8 +115,9 @@ export class PragmaticOracle {
   }
 
   lastBalanceCents(beforeSeq = Infinity): Cents | undefined {
-    for (let i = this.events.length - 1; i >= 0; i--) {
-      const e = this.events[i];
+    const events = this.ordered();
+    for (let i = events.length - 1; i >= 0; i--) {
+      const e = events[i];
       if (e.seq >= beforeSeq) continue;
       const b = pragmaticCents(e.response.balance);
       if (b !== undefined) return b;
@@ -122,12 +127,18 @@ export class PragmaticOracle {
 
   /** Current bet as configured in the game (from the last request/response carrying c & l). */
   currentBetCents(): Cents | undefined {
-    for (let i = this.events.length - 1; i >= 0; i--) {
-      const e = this.events[i];
+    const events = this.ordered();
+    for (let i = events.length - 1; i >= 0; i--) {
+      const e = events[i];
       const bet = betFrom(e.request) ?? betFrom(e.response);
       if (bet !== undefined) return bet;
     }
     return undefined;
+  }
+
+  /** Events sorted by arrival (bodies can finish reading out of order). */
+  private ordered(): GameEvent[] {
+    return [...this.events].sort((a, b) => a.seq - b.seq);
   }
 
   async waitFor(pred: (e: GameEvent) => boolean, sinceSeq: number, timeoutMs: number): Promise<GameEvent | undefined> {
@@ -149,7 +160,7 @@ export class PragmaticOracle {
   async waitForSettled(sinceSeq: number, timeoutMs: number, quietMs = 2000): Promise<boolean> {
     const end = Date.now() + timeoutMs;
     while (Date.now() < end) {
-      const after = this.events.filter((e) => e.seq >= sinceSeq);
+      const after = this.ordered().filter((e) => e.seq >= sinceSeq);
       const last = after[after.length - 1];
       const ready = after.some((e) => e.action === 'doSpin') && last?.response.na === 's';
       if (ready && Date.now() - last.at >= quietMs) return true;
@@ -159,7 +170,7 @@ export class PragmaticOracle {
   }
 
   summarizeSince(sinceSeq: number): SpinSummary {
-    return summarizeSpin(this.events, sinceSeq, this.lastBalanceCents(sinceSeq));
+    return summarizeSpin(this.ordered(), sinceSeq, this.lastBalanceCents(sinceSeq));
   }
 }
 

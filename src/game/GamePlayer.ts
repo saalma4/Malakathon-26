@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { PNG } from 'pngjs';
 import type { Market } from '../config/markets';
 import { PragmaticOracle } from '../oracle/pragmatic';
 import type { Box, GameView } from '../vision/capture';
@@ -161,7 +162,6 @@ export class GamePlayer {
 
 /** A frame that is (almost) a single colour: game still loading. */
 async function isBlank(png: Buffer): Promise<boolean> {
-  const { PNG } = await import('pngjs');
   const { data } = PNG.sync.read(png);
   const [r0, g0, b0] = [data[0], data[1], data[2]];
   let different = 0;

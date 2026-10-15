@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { escapeHtml as esc } from '../util/html';
 import type { Box } from './capture';
 
 export interface Mark {
@@ -7,7 +8,6 @@ export interface Mark {
   ok?: boolean;
 }
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 /** Draws boxes and labels over a screenshot: "this is what the checker saw, and where". */
 export async function annotate(png: Buffer, marks: Mark[], title?: string): Promise<Buffer> {
