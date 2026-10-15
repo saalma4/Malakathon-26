@@ -103,16 +103,19 @@ test.describe('Scenario 2 — Insufficient balance', () => {
       sources: ['screen'],
     });
 
-    // In-game balance unchanged.
-    const after = await player.readState(nowFrame);
+    // In-game balance unchanged: the screen is the proof (the player must still see the same balance);
+    // the provider network, when observable, must agree.
+    const after = await player.readStateConfirming([inGameBefore], 3, nowFrame);
+    const stillVisible = !!player.seen(after, inGameBefore);
     const netAfter = oracle.lastBalanceCents();
-    const inGameAfter = netAfter ?? (player.seen(after, inGameBefore) ? inGameBefore : after.balance?.token.cents);
+    const screenAfter = stillVisible ? inGameBefore : after.balance?.token.cents;
+    const networkOk = netAfter === undefined || unchanged(inGameBefore, netAfter);
     await checks.check({
       id: 'S2.ingame-balance-unchanged',
       title: 'In-game balance does not change',
-      pass: unchanged(inGameBefore, inGameAfter),
-      expected: money(inGameBefore),
-      actual: money(inGameAfter),
+      pass: unchanged(inGameBefore, screenAfter) && networkOk,
+      expected: `${money(inGameBefore)} still shown on screen`,
+      actual: `screen: ${stillVisible ? money(inGameBefore) : `${money(screenAfter)} (expected value not visible)`}` + (netAfter !== undefined ? ` · network: ${money(netAfter)}` : ''),
       sources: oracle.detected ? ['screen', 'network'] : ['screen'],
       evidence: [{ name: 'game-after-attempt', png: nowFrame }],
     });
