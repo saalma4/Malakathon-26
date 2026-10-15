@@ -1,0 +1,49 @@
+{
+  "gameWidth": 1516,
+  "credit": {
+    "label": {
+      "x": 107,
+      "y": 74,
+      "width": 82,
+      "height": 31
+    },
+    "amount": {
+      "x": 209,
+      "y": 81,
+      "width": 26,
+      "height": 19
+    }
+  },
+  "bet": {
+    "label": {
+      "x": 103,
+      "y": 108,
+      "width": 92,
+      "height": 18
+    },
+    "amount": {
+      "x": 208,
+      "y": 106,
+      "width": 74,
+      "height": 27
+    }
+  },
+  "spin": {
+    "x": 932,
+    "y": 6,
+    "width": 144,
+    "height": 144
+  },
+  "plus": {
+    "x": 1084,
+    "y": 46,
+    "width": 64,
+    "height": 64
+  },
+  "minus": {
+    "x": 858,
+    "y": 48,
+    "width": 60,
+    "height": 60
+  }
+}

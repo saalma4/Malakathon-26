@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game Validator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◎</span>
+      <div>
+        <h1>Game Validator</h1>
+        <p>Valida juegos de casino como los ve un jugador</p>
+      </div>
+    </div>
+    <form id="run-form" class="controls">
+      <label>Proveedor
+        <select id="provider"><option value="">Cargando proveedores…</option></select>
+      </label>
+      <button id="add-provider" type="button" class="ghost-btn">＋ Añadir proveedor</button>
+      <div class="picker">
+        <span class="picker-label">Juegos</span>
+        <button id="games-btn" type="button" class="picker-btn" aria-haspopup="true" aria-expanded="false" disabled>Elige un proveedor</button>
+        <div id="games-panel" class="picker-panel hidden" role="dialog" aria-label="Juegos del proveedor">
+          <div class="picker-tools">
+            <input id="games-search" type="search" placeholder="Buscar juego…" autocomplete="off">
+            <button id="games-all" type="button" class="link-btn">Marcar visibles</button>
+            <button id="games-none" type="button" class="link-btn">Desmarcar todos</button>
+          </div>
+          <ul id="games-list" class="picker-list"></ul>
+          <div class="picker-foot"><span id="games-count" class="muted"></span><button id="games-close" type="button" class="link-btn">Listo</button></div>
+        </div>
+      </div>
+      <button id="play" type="submit" class="play" disabled><span aria-hidden="true">▶</span> Play</button>
+    </form>
+  </header>
+
+  <div class="layout">
+    <aside class="history">
+      <h2>Historial</h2>
+      <ul id="history"><li class="muted">Sin pruebas todavía.</li></ul>
+    </aside>
+
+    <main>
+      <section id="banner" class="banner idle">
+        <div>
+          <h2 id="banner-title">Elige un proveedor y sus juegos, y pulsa ▶ Play</h2>
+          <p id="banner-meta">Cada juego se abre en tu Chrome en modo prueba. Por juego se comprueba que su HUD coincide con la plantilla del proveedor, la moneda, y que + / − cambian la apuesta y el saldo cuadra tras un giro.</p>
+        </div>
+        <div class="counters">
+          <div class="counter pass"><b id="count-pass">0</b><span>pruebas OK</span></div>
+          <div class="counter fail"><b id="count-fail">0</b><span>fallidas</span></div>
+        </div>
+      </section>
+
+      <section id="games-card" class="card hidden">
+        <div class="card-head">
+          <h2>Informe por juego</h2>
+          <span id="games-links" class="links-inline"></span>
+        </div>
+        <table class="gtable">
+          <thead><tr><th>Juego</th><th>Estado</th><th class="num">Pasadas</th><th class="num">No pasadas</th></tr></thead>
+          <tbody id="games-table"></tbody>
+        </table>
+        <p class="muted small">Pulsa un juego para ver qué pruebas ha pasado y cuáles no.</p>
+      </section>
+
+      <div class="grid">
+        <section class="card live">
+          <div class="card-head">
+            <h2 id="detail-title">Vista en directo</h2>
+            <span id="live-badge" class="badge">en espera</span>
+          </div>
+          <div class="screen">
+            <img id="live" alt="Vista del juego">
+            <div id="screen-empty" class="screen-empty">Aquí verás el juego mientras se prueba</div>
+            <div id="status" class="status hidden"><span class="spinner"></span><span id="status-text"></span></div>
+          </div>
+          <div id="result-links" class="links hidden"></div>
+        </section>
+
+        <section class="card checks">
+          <div class="card-head">
+            <h2>Pruebas del juego</h2>
+            <span id="checks-progress" class="muted"></span>
+          </div>
+          <div id="checks"><p class="muted">Las pruebas aparecerán aquí según se hagan.</p></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Capturas</h2>
+          <span id="shots-count" class="muted"></span>
+        </div>
+        <div id="shots" class="shots"><p class="muted">Cada captura que tome el programa aparecerá aquí, con lo que ha encontrado marcado encima.</p></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Pasos</h2></div>
+        <ol id="steps" class="steps"><li class="muted">—</li></ol>
+      </section>
+    </main>
+  </div>
+
+  <div id="prov-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="prov-title">
+    <form id="prov-form" class="modal-card">
+      <div class="card-head">
+        <h2 id="prov-title">Añadir proveedor</h2>
+        <button type="button" class="link-btn" id="prov-close" aria-label="Cerrar">✕</button>
+      </div>
+      <p class="muted small">Sube una captura de la barra del HUD de cualquiera de sus juegos, a tamaño real, con: la etiqueta del <b>crédito/saldo</b> y su cantidad, la etiqueta de la <b>apuesta</b> y su cantidad, y el botón <b>Spin</b> con los botones <b>+</b> y <b>−</b> a sus lados. Todos los juegos del proveedor se probarán buscando esos elementos.</p>
+      <label class="field">Nombre del proveedor (como en Betsson)
+        <input id="prov-name" list="prov-studios" autocomplete="off" placeholder="p. ej. Pragmatic Play" required>
+        <datalist id="prov-studios"></datalist>
+      </label>
+      <div id="prov-drop" class="drop" tabindex="0">
+        <input id="prov-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+        <img id="prov-img" alt="Captura elegida" class="hidden">
+        <span id="prov-drop-text">Arrastra aquí la captura, <button type="button" class="link-btn" id="prov-pick">elige un archivo</button> o pégala con Ctrl+V</span>
+      </div>
+      <label class="check-line"><input id="prov-replace" type="checkbox"> Reemplazar la plantilla existente si ya hay una</label>
+      <div id="prov-result" class="hidden"></div>
+      <div class="modal-foot">
+        <button type="button" class="ghost-btn" id="prov-cancel">Cancelar</button>
+        <button type="submit" class="play" id="prov-save">Guardar y analizar</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Captura ampliada">
+    <button class="lb-close" aria-label="Cerrar">✕</button>
+    <button class="lb-prev" aria-label="Anterior">‹</button>
+    <figure>
+      <img id="lb-img" alt="">
+      <figcaption id="lb-caption"></figcaption>
+    </figure>
+    <button class="lb-next" aria-label="Siguiente">›</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
