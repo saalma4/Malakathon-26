@@ -105,8 +105,26 @@ jobs:
         with:
           name: validation-report
           path: site/
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      # Publishing to GitHub Pages is optional: it needs Pages enabled by a repo admin
+      # (Settings → Pages → Source: GitHub Actions). Without it, the report is still
+      # available as the "validation-report" artifact and the job does not fail.
+      - name: Check whether GitHub Pages is enabled
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" >/dev/null 2>&1; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=GitHub Pages no activado::El informe no se publica en Pages. Descárgalo como artefacto 'validation-report'. Para publicarlo, un administrador debe activar Settings → Pages → Source: GitHub Actions."
+            echo "> El informe está disponible como artefacto **validation-report** (GitHub Pages no está activado en este repositorio)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - if: steps.pages.outputs.enabled == 'true'
+        uses: actions/configure-pages@v5
+      - if: steps.pages.outputs.enabled == 'true'
+        uses: actions/upload-pages-artifact@v3
         with: { path: site }
-      - id: deploy
+      - if: steps.pages.outputs.enabled == 'true'
+        id: deploy
         uses: actions/deploy-pages@v4

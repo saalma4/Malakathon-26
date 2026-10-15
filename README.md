@@ -346,7 +346,7 @@ El workflow es `.github/workflows/validate.yml`:
 Antes de lanzarlo:
 - **Secrets** del repositorio: `COM_FUNDED_USER/PASS` y `COM_EMPTY_USER/PASS`.
 - **Geobloqueo:** los runners de GitHub están fuera de los países permitidos. Hay que añadir el secret `COM_PROXY`, o la variable `RUNNER` con la etiqueta de un runner self-hosted.
-- **Pages:** Settings → Pages → Source: "GitHub Actions".
+- **Pages (opcional):** para publicar el informe en GitHub Pages, un administrador del repositorio debe activar Settings → Pages → Source: "GitHub Actions". Si no está activado, el workflow no falla: el informe se descarga como artefacto `validation-report` desde la página de la ejecución.
 - **Mercados:** en esta PoC (solo EUR), lanzarlo a mano con `markets = ["com"]`.
 
 ## 12. Estructura del código
