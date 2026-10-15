@@ -297,7 +297,6 @@ assets/games/<juego>/       plantilla del botón Spin y umbrales calibrados
 
 | Síntoma | Solución |
 |---|---|
-| `El puerto 4321 ya está en uso` | Ya hay una interfaz abierta: cerrarla con `Ctrl+C` o usar `UI_PORT=4322 npm run ui` |
 | `Geo-redirected from www.betsson.com to www.betsson.es` | Geobloqueo: usar `COM_PROXY` o una ubicación permitida |
 | `Sin sesión y sin ES_FUNDED_USER/PASS en .env` | Ejecutar sin `--headless` e iniciar sesión a mano, o rellenar `.env` |
 | `Game did not become playable in time` | Ejecutar con `DEBUG_VISION=1` y revisar `runs/debug-ready.png` |
