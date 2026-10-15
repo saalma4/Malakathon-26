@@ -10,6 +10,31 @@ Todo se ejecuta en local y sin coste: no se utilizan APIs de inteligencia artifi
 
 ---
 
+## Índice
+
+1. [La solución: visión por computador + peticiones web](#la-solución-visión-por-computador--peticiones-web)
+2. [Instalación](#instalación)
+   - [Requisitos](#requisitos)
+   - [Linux](#linux)
+   - [Windows (PowerShell)](#windows-powershell)
+3. [Uso](#uso)
+   - [Interfaz web](#interfaz-web)
+   - [Terminal](#terminal)
+   - [Demostración de fallos](#demostración-de-fallos)
+   - [Juegos dentro de Betsson](#juegos-dentro-de-betsson)
+   - [Escenarios del reto con cuentas de Betsson](#escenarios-del-reto-con-cuentas-de-betsson)
+4. [Comprobaciones](#comprobaciones)
+5. [Verificación](#verificación)
+6. [Integración continua (GitHub Actions)](#integración-continua-github-actions)
+7. [Configuración](#configuración)
+   - [Añadir un juego nuevo](#añadir-un-juego-nuevo)
+8. [Seguridad](#seguridad)
+9. [Estructura del código](#estructura-del-código)
+10. [Limitaciones](#limitaciones)
+11. [Solución de problemas](#solución-de-problemas)
+
+---
+
 ## La solución: visión por computador + peticiones web
 
 El juego se dibuja en un `canvas` dentro de un iframe de otro dominio, así que no hay botones ni textos que leer en el DOM.
