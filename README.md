@@ -13,71 +13,78 @@ Todo funciona en local y gratis: no usa APIs de IA de pago.
 
 ---
 
-## 🚀 Empezar en 5 minutos
+## Instalación y uso
 
-### 1. Instala esto (solo una vez)
+### Requisitos previos
 
-| Programa | Para qué | Cómo instalarlo |
+| Software | Uso | Instalación |
 |---|---|---|
-| **Git** | descargar el proyecto | <https://git-scm.com/downloads> · Linux: `sudo apt install git` (Ubuntu/Debian) o `sudo pacman -S git` (Arch) |
-| **Node.js 22 o superior** | ejecutar el programa (incluye `npm`) | <https://nodejs.org> (versión LTS) · Linux/macOS también con [nvm](https://github.com/nvm-sh/nvm): `nvm install 22` |
+| Git | Descarga del repositorio | <https://git-scm.com/downloads>. En Linux: `sudo apt install git` (Ubuntu/Debian) o `sudo pacman -S git` (Arch). |
+| Node.js 22 o superior | Ejecución del programa (incluye `npm`) | <https://nodejs.org>, versión LTS. En Linux y macOS también con [nvm](https://github.com/nvm-sh/nvm): `nvm install 22`. |
 
-Para comprobar que están instalados, abre una terminal (en Windows, PowerShell) y escribe:
+Comprobación de las versiones instaladas:
 
 ```bash
-git --version     # cualquier versión
-node --version    # tiene que ser v22 o mayor
+git --version
+node --version    # debe ser v22 o superior
 ```
 
-### 2. Descarga el proyecto e instala sus dependencias
+### Instalación
 
 ```bash
 git clone https://github.com/saalma4/Malakathon-26.git
 cd Malakathon-26
-npm ci                              # instala las librerías del proyecto
-npx playwright install chromium     # descarga el navegador que usa el programa (~150 MB)
+npm ci                              # dependencias del proyecto
+npx playwright install chromium     # navegador utilizado por el programa (~150 MB)
 ```
 
-> En Linux puede salir el aviso `BEWARE: your OS is not officially supported by Playwright`. Es normal: descarga una
-> versión compatible y funciona igual. Si al ejecutar faltaran librerías del sistema, usa `npx playwright install --with-deps chromium`.
+En algunas distribuciones de Linux Playwright muestra el aviso `BEWARE: your OS is not officially supported by Playwright`.
+Es informativo: se descarga una compilación compatible. Si faltasen librerías del sistema, se pueden instalar con
+`npx playwright install --with-deps chromium`.
 
-### 3. Úsalo
+La primera ejecución requiere conexión a internet para cargar el juego y descargar los datos de idioma del OCR.
+
+### Ejecución
 
 ```bash
 npm run ui
 ```
 
-Se abre el navegador en <http://127.0.0.1:4321>. Si no se abre solo, copia esa dirección en tu navegador. Después:
+La interfaz queda disponible en <http://127.0.0.1:4321> y se abre automáticamente en el navegador. Si no se abre, hay
+que introducir esa dirección a mano. Para lanzar una prueba:
 
-1. En **Juego** deja *Demo Pragmatic Play · Sweet Bonanza*: es un juego real, gratis y no necesita cuenta.
-2. Elige cuántos **Giros** quieres (por ejemplo, 2).
-3. Pulsa **▶ Play**.
+1. En **Juego**, seleccionar *Demo Pragmatic Play · Sweet Bonanza*: es un juego real, gratuito y sin cuenta.
+2. Indicar el número de **Giros**.
+3. Pulsar **Play**.
 
-Verás el juego en directo, las comprobaciones en verde (✔) o rojo (✘) y las capturas que va haciendo. Al terminar, el
-resultado ("✔ 12/12 comprobaciones OK"), el vídeo y un informe HTML. Una ejecución tarda unos 1–2 minutos por giro.
-Para cerrar el programa, pulsa `Ctrl+C` en la terminal.
+Durante la ejecución se muestran el juego en directo, el resultado de cada comprobación y las capturas tomadas.
+Al finalizar se presentan:
+- el resultado global (por ejemplo, "12/12 comprobaciones OK");
+- el vídeo de la sesión;
+- un informe HTML.
 
-**La primera ejecución necesita internet**: descarga el juego y los datos de idioma del lector de texto (OCR).
+Cada giro tarda aproximadamente entre 1 y 2 minutos. El servidor se detiene con `Ctrl+C`.
 
-### Alternativa sin interfaz (terminal)
+### Ejecución desde la terminal
 
 ```bash
-npm run fun -- demo --headless              # 1 giro, resultado en la terminal
+npm run fun -- demo --headless              # 1 giro
 npm run fun -- demo --headless --spins=3    # 3 giros
 ```
 
-Las evidencias (capturas, vídeo e informe `report.html`) quedan en la carpeta `runs/`.
+Las evidencias (capturas, vídeo e informe `report.html`) se guardan en `runs/`.
 
-> **Windows** (aún sin probar): usa los comandos `npm run …` en PowerShell. El atajo `./play.sh` es solo para Linux/macOS
-> (o Git Bash). Si `npm run ui` no abre el navegador solo, entra a mano en <http://127.0.0.1:4321>.
+En Windows (sin probar) deben usarse los comandos `npm run …` desde PowerShell. El atajo `./play.sh` requiere bash
+(Linux, macOS o Git Bash).
 
 ---
 
 ## Índice
+- [Instalación y uso](#instalación-y-uso)
 1. [Estado actual](#1-estado-actual)
 2. [Cómo funciona](#2-cómo-funciona)
-3. [Instalación](#3-instalación)
-4. [Uso rápido](#4-uso-rápido)
+3. [Requisitos y compatibilidad](#3-requisitos-y-compatibilidad)
+4. [Modos de uso](#4-modos-de-uso)
 5. [Escenarios y comprobaciones](#5-escenarios-y-comprobaciones)
 6. [Verificación exhaustiva (resultados)](#6-verificación-exhaustiva-resultados)
 7. [Herramientas](#7-herramientas)
@@ -95,14 +102,14 @@ Las evidencias (capturas, vídeo e informe `report.html`) quedan en la carpeta `
 
 | Pieza | Estado |
 |---|---|
-| Visión del juego: localizar Spin, detectar giro/parada, OCR de saldo, apuesta y premio | ✅ Verificado contra un juego real de Pragmatic Play (Sweet Bonanza, demo pública), en español y en inglés, EUR |
-| Cuadre de saldo en juego, incluidos premios con cascadas (tumbles) | ✅ Verificado en vivo, al céntimo |
-| Oráculo de red de Pragmatic (`gameService`) | ✅ Verificado en vivo |
-| Reglas PASS/FAIL y controles negativos | ✅ Tests de inyección de fallos + control negativo en vivo |
-| Login de Betsson y detección de geobloqueo | ✅ Probado en betsson.es (formulario, rechazo de un usuario falso, redirección .com/.pe → .es) |
-| Escenarios 1 y 2 completos con cuenta real de Betsson (saldo Betsson antes/después) | ⏳ Pendiente de credenciales de prueba |
-| betsson.com desde CI | ⏳ Requiere proxy o runner propio (geobloqueo) |
-| Otras divisas (PEN) | ⏸️ Fuera del alcance de esta PoC |
+| Visión del juego: localizar Spin, detectar giro/parada, OCR de saldo, apuesta y premio | Verificado contra un juego real de Pragmatic Play (Sweet Bonanza, demo pública), en español y en inglés, EUR |
+| Cuadre de saldo en juego, incluidos premios con cascadas (tumbles) | Verificado en vivo, al céntimo |
+| Oráculo de red de Pragmatic (`gameService`) | Verificado en vivo |
+| Reglas PASS/FAIL y controles negativos | Verificado con tests de inyección de fallos y un control negativo en vivo |
+| Login de Betsson y detección de geobloqueo | Probado en betsson.es (formulario, rechazo de un usuario falso, redirección .com/.pe → .es) |
+| Escenarios 1 y 2 completos con cuenta real de Betsson (saldo Betsson antes/después) | Pendiente de credenciales de prueba |
+| betsson.com desde CI | Pendiente: requiere proxy o runner propio (geobloqueo) |
+| Otras divisas (PEN) | Fuera del alcance de esta PoC |
 
 ## 2. Cómo funciona
 
@@ -133,40 +140,28 @@ El DOM del juego no se usa nunca: solo la **posición** del iframe/canvas, para 
 todo para **confirmar que un valor que ya conocemos** (por la red o la cabecera de Betsson) **está visible en pantalla**.
 Esto es mucho más fiable. Si no lo encuentra, el resultado es FAIL con la captura adjunta, nunca un PASS falso.
 
-## 3. Instalación
+## 3. Requisitos y compatibilidad
 
-Los pasos están en [Empezar en 5 minutos](#-empezar-en-5-minutos). En resumen:
-- **Requisitos:** Git, Node.js 22 o superior e internet en la primera ejecución.
-- **Sistemas:** Linux, macOS y Windows.
+- **Requisitos:** Git, Node.js 22 o superior y conexión a internet en la primera ejecución. Los datos de idioma del OCR (inglés y español) se guardan en `.cache/tesseract`.
+- **Probado** en Linux: en el equipo de desarrollo (Arch/Omarchy) y en una máquina Ubuntu limpia de GitHub Actions (instalación, typecheck y tests unitarios).
+- **Sin probar** en macOS y Windows. El código no depende del sistema operativo, salvo el atajo `./play.sh`, que es un script de bash.
+- **Modo headless recomendado.** El modo con ventana puede fallar en gestores de ventanas en mosaico (por ejemplo, Hyprland), porque la ventana no conserva el tamaño de 1440×900.
 
-```bash
-git clone https://github.com/saalma4/Malakathon-26.git
-cd Malakathon-26
-npm ci
-npx playwright install chromium
-```
+## 4. Modos de uso
 
-La primera vez que se usa el OCR se descargan los datos de idioma (inglés y español) a `.cache/tesseract`.
-
-**Probado** en Linux: en este equipo (Arch/Omarchy) y en una máquina Ubuntu limpia de GitHub Actions (instalación, typecheck
-y tests unitarios). En macOS y Windows no se ha probado todavía; el código no depende del sistema operativo, salvo el
-atajo `./play.sh`, que es de bash.
-
-## 4. Uso rápido
-
-### Interfaz web (la forma más cómoda)
+### Interfaz web
 
 ```bash
 npm run ui                     # abre http://127.0.0.1:4321 en el navegador
 ```
 
-Eliges el juego y el número de giros y pulsas **▶ Play**. Mientras se ejecuta, ves en directo:
+Eliges el juego y el número de giros y pulsas **Play**. Mientras se ejecuta, ves en directo:
 - **la vista del juego**, con el paso actual: "Esperando a que el juego sea jugable…", "Giro 2/3"…;
-- **las comprobaciones**, con un ✔ verde o un ✘ rojo según van saliendo, y el valor esperado frente al visto, agrupadas por giro;
+- **las comprobaciones**, marcadas como correctas (verde) o fallidas (rojo) según se completan, con el valor esperado frente al observado y agrupadas por giro;
 - **las capturas que toma el programa**: juego listo, antes del giro (con el saldo, la apuesta y el botón Spin marcados), rodillos en movimiento y después. Al hacer clic se amplían, y se navega con ← y →.
 
 Al terminar aparece:
-- un banner verde ("✔ 12/12 comprobaciones OK") o rojo con los fallos;
+- un resumen en verde ("12/12 comprobaciones OK") o, si hay fallos, en rojo;
 - el **vídeo** de la sesión;
 - enlaces al **informe HTML** (`report.html`, que se puede abrir y compartir sin servidor), a `result.json` y a `network.json`.
 
@@ -177,7 +172,7 @@ Detalles:
 - Solo hay una ejecución a la vez. Si recargas la página a mitad, no se pierde nada.
 - Solo escucha en `127.0.0.1`. El puerto se cambia con `UI_PORT=8080 npm run ui`, y `-- --no-open` evita que se abra el navegador.
 
-### Ver el programa jugando desde la terminal
+### Terminal
 
 ```bash
 ./play.sh demo                 # demo pública de Pragmatic Play (Sweet Bonanza, español, EUR)
@@ -263,19 +258,19 @@ La verificación se hizo el 15 de octubre de 2026 contra la demo pública de Pra
 
 | # | Prueba | Resultado |
 |---|---|---|
-| 1 | Typecheck (`npm run typecheck`) | ✅ sin errores |
-| 2 | Tests unitarios (`npm run test:unit`) | ✅ **28/28** |
-| 3 | Inyección de fallos (`tests/unit/checks.spec.ts`): saldo descuadrado por 1 céntimo, premio anunciado pero no abonado, cartera sin actualizar, apuesta mostrada ≠ usada, moneda incorrecta o mezclada, clic sin reacción, rodillos que no paran, giro aceptado sin saldo, mensaje en otro idioma, valor en pantalla ≠ real | ✅ todos dan **FAIL**, como deben |
-| 4 | Calibración en vivo (`npm run calibrate -- demo`): reposo frente a giro | ✅ 4/4: reposo 5,2 % de cambio y 0 s de movimiento sostenido; giro 31,7 % y 4,4 s |
-| 5 | En vivo, español/EUR, 5 giros (`./play.sh demo --spins=5`) | ✅ **30/30**, incluido un premio de 5,30 € con cascadas |
-| 6 | En vivo, inglés/EUR con la configuración de betsson.com | ✅ **12/12** |
-| 7 | En vivo, ejecución final con el código definitivo, 3 giros | ✅ **18/18**; Spin localizado por plantilla en los 3 |
-| 8 | **Control negativo en vivo:** juego en EUR con el mercado configurado como PEN | ✅ la comprobación de moneda da **FAIL** ("esperado PEN · visto EUR") y el resto pasa |
-| 9 | Plantilla del Spin sobre fotogramas reales | ✅ botón quieto: 0,000–0,019 (encontrado); intro con botón parecido: 0,068 (rechazado); rodillos girando: ≥ 0,066 (rechazado). Umbral 0,04 |
-| 10 | Login de betsson.es con un usuario falso | ✅ rechazado y detectado, sin filtrar nada |
-| 11 | Geobloqueo: betsson.com/.pe desde España | ✅ detectado, con un mensaje que indica el proxy a configurar |
-| 12 | Secretos: búsqueda en los ficheros versionados, `.gitignore` y tokens de sesión en los logs | ✅ nada versionado; `.env`, `runs/`, `discovery/`, `.cache/` y `report/` ignorados; `mgckey` enmascarado (15/15) |
-| 13 | YAML del workflow | ✅ válido (jobs `unit`, `validate`, `report`) |
+| 1 | Typecheck (`npm run typecheck`) | sin errores |
+| 2 | Tests unitarios (`npm run test:unit`) | **28/28** |
+| 3 | Inyección de fallos (`tests/unit/checks.spec.ts`): saldo descuadrado por 1 céntimo, premio anunciado pero no abonado, cartera sin actualizar, apuesta mostrada ≠ usada, moneda incorrecta o mezclada, clic sin reacción, rodillos que no paran, giro aceptado sin saldo, mensaje en otro idioma, valor en pantalla ≠ real | todos dan **FAIL**, como deben |
+| 4 | Calibración en vivo (`npm run calibrate -- demo`): reposo frente a giro | 4/4: reposo 5,2 % de cambio y 0 s de movimiento sostenido; giro 31,7 % y 4,4 s |
+| 5 | En vivo, español/EUR, 5 giros (`./play.sh demo --spins=5`) | **30/30**, incluido un premio de 5,30 € con cascadas |
+| 6 | En vivo, inglés/EUR con la configuración de betsson.com | **12/12** |
+| 7 | En vivo, ejecución final con el código definitivo, 3 giros | **18/18**; Spin localizado por plantilla en los 3 |
+| 8 | **Control negativo en vivo:** juego en EUR con el mercado configurado como PEN | la comprobación de moneda da **FAIL** ("esperado PEN · visto EUR") y el resto pasa |
+| 9 | Plantilla del Spin sobre fotogramas reales | botón quieto: 0,000–0,019 (encontrado); intro con botón parecido: 0,068 (rechazado); rodillos girando: ≥ 0,066 (rechazado). Umbral 0,04 |
+| 10 | Login de betsson.es con un usuario falso | rechazado y detectado, sin filtrar nada |
+| 11 | Geobloqueo: betsson.com/.pe desde España | detectado, con un mensaje que indica el proxy a configurar |
+| 12 | Secretos: búsqueda en los ficheros versionados, `.gitignore` y tokens de sesión en los logs | nada versionado; `.env`, `runs/`, `discovery/`, `.cache/` y `report/` ignorados; `mgckey` enmascarado (15/15) |
+| 13 | YAML del workflow | válido (jobs `unit`, `validate`, `report`) |
 
 **Fallos reales que encontró la verificación y que están corregidos:**
 - se daba el juego por listo estando aún en la intro;
@@ -292,7 +287,7 @@ La verificación se hizo el 15 de octubre de 2026 contra la demo pública de Pra
 
 ```bash
 npm run typecheck && npm run test:unit
-npm run calibrate -- demo --headless       # los 4 criterios en ✔
+npm run calibrate -- demo --headless       # deben cumplirse los 4 criterios
 ./play.sh demo --headless --spins=5        # 30/30
 ./play.sh demo --headless --market=pe      # control negativo: la moneda TIENE que dar FAIL
 ```
@@ -318,7 +313,7 @@ npm run calibrate -- demo --headless       # los 4 criterios en ✔
    ```json
    { "spinRel": { "x": 0.803, "y": 0.906 }, "maxScore": 0.04, "stableMaxRatio": 0.06, "motionMinRatio": 0.14, "nonSpinMotionMaxMs": 900 }
    ```
-4. Repetir la calibración hasta tener los 4 ✔, y después `./play.sh "<url>" --game=<clave> --spins=3`.
+4. Repetir la calibración hasta que se cumplan los 4 criterios, y después `./play.sh "<url>" --game=<clave> --spins=3`.
 
 ## 9. Configuración
 
