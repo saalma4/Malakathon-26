@@ -13,6 +13,66 @@ Todo funciona en local y gratis: no usa APIs de IA de pago.
 
 ---
 
+## 🚀 Empezar en 5 minutos
+
+### 1. Instala esto (solo una vez)
+
+| Programa | Para qué | Cómo instalarlo |
+|---|---|---|
+| **Git** | descargar el proyecto | <https://git-scm.com/downloads> · Linux: `sudo apt install git` (Ubuntu/Debian) o `sudo pacman -S git` (Arch) |
+| **Node.js 22 o superior** | ejecutar el programa (incluye `npm`) | <https://nodejs.org> (versión LTS) · Linux/macOS también con [nvm](https://github.com/nvm-sh/nvm): `nvm install 22` |
+
+Para comprobar que están instalados, abre una terminal (en Windows, PowerShell) y escribe:
+
+```bash
+git --version     # cualquier versión
+node --version    # tiene que ser v22 o mayor
+```
+
+### 2. Descarga el proyecto e instala sus dependencias
+
+```bash
+git clone https://github.com/saalma4/Malakathon-26.git
+cd Malakathon-26
+npm ci                              # instala las librerías del proyecto
+npx playwright install chromium     # descarga el navegador que usa el programa (~150 MB)
+```
+
+> En Linux puede salir el aviso `BEWARE: your OS is not officially supported by Playwright`. Es normal: descarga una
+> versión compatible y funciona igual. Si al ejecutar faltaran librerías del sistema, usa `npx playwright install --with-deps chromium`.
+
+### 3. Úsalo
+
+```bash
+npm run ui
+```
+
+Se abre el navegador en <http://127.0.0.1:4321>. Si no se abre solo, copia esa dirección en tu navegador. Después:
+
+1. En **Juego** deja *Demo Pragmatic Play · Sweet Bonanza*: es un juego real, gratis y no necesita cuenta.
+2. Elige cuántos **Giros** quieres (por ejemplo, 2).
+3. Pulsa **▶ Play**.
+
+Verás el juego en directo, las comprobaciones en verde (✔) o rojo (✘) y las capturas que va haciendo. Al terminar, el
+resultado ("✔ 12/12 comprobaciones OK"), el vídeo y un informe HTML. Una ejecución tarda unos 1–2 minutos por giro.
+Para cerrar el programa, pulsa `Ctrl+C` en la terminal.
+
+**La primera ejecución necesita internet**: descarga el juego y los datos de idioma del lector de texto (OCR).
+
+### Alternativa sin interfaz (terminal)
+
+```bash
+npm run fun -- demo --headless              # 1 giro, resultado en la terminal
+npm run fun -- demo --headless --spins=3    # 3 giros
+```
+
+Las evidencias (capturas, vídeo e informe `report.html`) quedan en la carpeta `runs/`.
+
+> **Windows** (aún sin probar): usa los comandos `npm run …` en PowerShell. El atajo `./play.sh` es solo para Linux/macOS
+> (o Git Bash). Si `npm run ui` no abre el navegador solo, entra a mano en <http://127.0.0.1:4321>.
+
+---
+
 ## Índice
 1. [Estado actual](#1-estado-actual)
 2. [Cómo funciona](#2-cómo-funciona)
@@ -75,17 +135,22 @@ Esto es mucho más fiable. Si no lo encuentra, el resultado es FAIL con la captu
 
 ## 3. Instalación
 
-Requisitos: Node.js 22 o superior y Linux, macOS o Windows con WSL.
+Los pasos están en [Empezar en 5 minutos](#-empezar-en-5-minutos). En resumen:
+- **Requisitos:** Git, Node.js 22 o superior e internet en la primera ejecución.
+- **Sistemas:** Linux, macOS y Windows.
 
 ```bash
 git clone https://github.com/saalma4/Malakathon-26.git
 cd Malakathon-26
-git switch poc
 npm ci
 npx playwright install chromium
 ```
 
 La primera vez que se usa el OCR se descargan los datos de idioma (inglés y español) a `.cache/tesseract`.
+
+**Probado** en Linux: en este equipo (Arch/Omarchy) y en una máquina Ubuntu limpia de GitHub Actions (instalación, typecheck
+y tests unitarios). En macOS y Windows no se ha probado todavía; el código no depende del sistema operativo, salvo el
+atajo `./play.sh`, que es de bash.
 
 ## 4. Uso rápido
 
