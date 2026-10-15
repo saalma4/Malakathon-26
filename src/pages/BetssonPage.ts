@@ -113,7 +113,8 @@ export class BetssonPage {
     const withCurrency = extractAmounts(text, this.market).filter((t) => t.currency);
     const tok = withCurrency[0];
     if (!tok) return undefined;
-    return { cents: tok.cents, currency: currenciesIn(text)[0], text: `${tok.currency ?? ''} ${tok.text}`.trim() };
+    // Currency of this amount's own symbol, not just the first symbol anywhere in the header.
+    return { cents: tok.cents, currency: currenciesIn(tok.currency ?? '')[0], text: `${tok.currency ?? ''} ${tok.text}`.trim() };
   }
 
   /** Polls the header until the balance equals `expected` (wallet sync can lag), or returns the last value. */
@@ -137,7 +138,8 @@ export class BetssonPage {
   async openGame(): Promise<GameView> {
     await this.goto(this.market.gamePath);
     const realPlay = this.page.getByRole('button', { name: this.market.ui.realPlayButton }).first();
-    if (await realPlay.isVisible({ timeout: 3000 }).catch(() => false)) await realPlay.click();
+    // isVisible() does not wait; give a late-rendering "Play" button a few seconds.
+    if (await realPlay.waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false)) await realPlay.click();
     const frame = await findGameFrame(this.page);
     return new GameView(this.page, frame);
   }

@@ -95,7 +95,7 @@ async function openGame(page: Page): Promise<GameView> {
     betsson.assertNotGeoRedirected();
     await betsson.acceptCookies();
     const play = page.getByRole('button', { name: market.ui.realPlayButton }).first();
-    if (await play.isVisible({ timeout: 3000 }).catch(() => false)) await play.click();
+    if (await play.waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false)) await play.click();
   }
   return new GameView(page, await findGameFrame(page, 90_000));
 }
@@ -150,7 +150,7 @@ async function main() {
       const marker = oracle.mark();
       const baseline = await player.grab();
       await player.pressSpin(target);
-      const motion = await waitForMotion(player.grab, baseline, { minRatio: 0.04, timeoutMs: 6000 });
+      const motion = await waitForMotion(player.grab, baseline, { minRatio: player.assets.motionMinRatio, timeoutMs: 6000 });
       if (motion.peakFrame) save(`spin${i}-moving`, motion.peakFrame);
       say(`Movimiento: pico ${(motion.peakRatio * 100).toFixed(1)}% de píxeles a los ${motion.elapsedMs} ms`);
       const settled = oracle.detected ? await oracle.waitForSettled(marker, 60_000) : undefined;

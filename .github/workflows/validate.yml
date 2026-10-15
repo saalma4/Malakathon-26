@@ -5,7 +5,7 @@ on:
     inputs:
       markets:
         description: 'Markets to run (JSON list)'
-        default: '["com","pe"]'
+        default: '["com"]'
   push:
     branches: [main]
 
@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        market: ${{ fromJSON(github.event.inputs.markets || '["com","pe"]') }}
+        market: ${{ fromJSON(github.event.inputs.markets || '["com"]') }}
     env:
       CI: 'true'
       HEADED: '1'

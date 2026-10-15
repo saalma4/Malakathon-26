@@ -36,5 +36,10 @@ test.describe('money', () => {
     expect(currenciesIn('Saldo S/ 10.00')).toEqual(['PEN']);
     expect(currenciesIn('€10 or 10 EUR')).toEqual(['EUR']);
     expect(currenciesIn('10.00')).toEqual([]);
+    // Real OCR misreads of "S/." next to an amount (Sweet Bonanza, cur=PEN)
+    expect(currenciesIn('CREDITO 100.000,00 5/.')).toEqual(['PEN']);
+    expect(currenciesIn('APUESTA 2,00 S/,')).toEqual(['PEN']);
+    expect(currenciesIn('S|. 2.00')).toEqual(['PEN']);
+    expect(currenciesIn('page 1/2')).toEqual([]);
   });
 });

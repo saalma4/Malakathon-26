@@ -63,7 +63,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     await test.step(`Press Spin (${target.method})`, () => player.pressSpin(target));
 
     // 6. Did the game react? Did the spin finish?
-    const motion = await test.step('Watch reels start moving', () => waitForMotion(player.grab, baseline, { minRatio: 0.04, timeoutMs: 6000 }));
+    const motion = await test.step('Watch reels start moving', () => waitForMotion(player.grab, baseline, { minRatio: player.assets.motionMinRatio, timeoutMs: 6000 }));
     const netSettled = oracle.detected ? await oracle.waitForSettled(marker, 60_000) : undefined;
     const stable = await test.step('Watch reels stop (screen still)', () => waitForStable(player.grab, { stableMs: 2500, timeoutMs: 60_000, maxRatio: player.assets.stableMaxRatio }));
     const spin = oracle.summarizeSince(marker);

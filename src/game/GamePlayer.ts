@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import type { Market } from '../config/markets';
 import { PragmaticOracle } from '../oracle/pragmatic';
 import type { Box, GameView } from '../vision/capture';
@@ -49,14 +50,10 @@ export class GamePlayer {
     const end = Date.now() + timeoutMs;
     let blindClicks = 0;
     while (Date.now() < end) {
-      const stable = await waitForStable(this.grab, { stableMs: 2000, timeoutMs: 20000, maxRatio: Math.max(0.02, this.assets.stableMaxRatio) });
+      // Intros are animated and may never be perfectly still: don't wait long for stillness here.
+      const stable = await waitForStable(this.grab, { stableMs: 1500, timeoutMs: 8000, maxRatio: Math.max(0.02, this.assets.stableMaxRatio) });
       const png = stable.frame;
       if (await isBlank(png)) continue;
-
-      if (this.assets.spinTemplate) {
-        const m = await matchTemplate(png, this.assets.spinTemplate);
-        if (m && m.score <= this.assets.maxScore) return png;
-      }
 
       // Splash screens ("CONTINUE", "PULSA PARA CONTINUAR"): find the word on screen and press it.
       const screen = await readScreen(png);
@@ -66,13 +63,27 @@ export class GamePlayer {
         continue;
       }
 
-      // The network saying "loaded" is not enough: the player must see the game HUD (e.g. "CRÉDITO 100,00 €").
+      // The network saying "loaded" is not enough: the player must see the game HUD (e.g. "CRÉDITO 100,00 €"),
+      // and the Spin control when we know what it looks like (intros can show look-alike buttons).
       const L = this.market.gameLabels;
-      if (findLabeledAmount(screen, L.balance, this.market) || findLabeledAmount(screen, L.bet, this.market)) return png;
+      const hud = findLabeledAmount(screen, L.balance, this.market) || findLabeledAmount(screen, L.bet, this.market);
+      const spin = this.assets.spinTemplate ? await matchTemplate(png, this.assets.spinTemplate) : undefined;
+      if (process.env.DEBUG_VISION) {
+        fs.mkdirSync('runs', { recursive: true });
+        fs.writeFileSync('runs/debug-ready.png', png);
+        console.log(`[ready] hud=${hud ? hud.line.text : '-'} spin=${spin ? spin.score.toFixed(3) + '@' + Math.round(spin.center.x) + ',' + Math.round(spin.center.y) : '-'} stable=${stable.stable}`);
+      }
+      if (hud && (!this.assets.spinTemplate || (spin && spin.score <= this.assets.maxScore))) return png;
+      // HUD visible = the game is live. Never press anything blindly now: Space/clicks could start a paid spin.
+      if (hud) {
+        await this.view.page.waitForTimeout(1000);
+        continue;
+      }
 
-      // Intro without readable text (icon-only "continue" button): tap the centre, then try the Space key.
-      if (blindClicks % 2 === 0) await this.view.clickRel(0.5, 0.5);
-      else await this.view.pressKey('Space');
+      // Intro without readable text (icon-only "continue" button): try the Space key (Pragmatic intros accept it),
+      // then a tap in the centre. The HUD check above decides whether it worked.
+      if (blindClicks % 2 === 0) await this.view.pressKey('Space');
+      else await this.view.clickRel(0.5, 0.5);
       blindClicks++;
     }
     throw new Error('Game did not become playable in time');
@@ -119,10 +130,19 @@ export class GamePlayer {
     return cents === undefined ? undefined : findAmount(state.screen, cents, this.market);
   }
 
-  async locateSpin(png: Buffer): Promise<SpinTarget> {
+  /**
+   * Finds the Spin control on screen. Buttons have idle animations (pulse,
+   * glow), so a single frame may not match: try a few fresh frames before
+   * falling back to the configured position or the keyboard.
+   */
+  async locateSpin(png: Buffer, tries = 3): Promise<SpinTarget> {
     if (this.assets.spinTemplate) {
-      const m = await matchTemplate(png, this.assets.spinTemplate);
-      if (m && m.score <= this.assets.maxScore) return { method: 'template', box: m.box, center: m.center, score: m.score };
+      for (let i = 0; i < tries; i++) {
+        const frame = i === 0 ? png : await this.grab();
+        const m = await matchTemplate(frame, this.assets.spinTemplate);
+        if (m && m.score <= this.assets.maxScore) return { method: 'template', box: m.box, center: m.center, score: m.score };
+        await this.view.page.waitForTimeout(400);
+      }
     }
     if (this.assets.spinRel) {
       const b = await this.view.box();

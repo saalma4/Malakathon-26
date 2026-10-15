@@ -93,10 +93,16 @@ export function allCurrencySymbols(): string[] {
   return ['S/.', 'S/', 'PEN', '€', 'EUR'];
 }
 
-/** Which currency codes are visible in the text. */
+/**
+ * Which currency codes are visible in the text. OCR often reads the sol sign
+ * "S/." as "5/.", "S/," or "S|." — accepted only when glued to an amount, so a
+ * stray "1/2" is not a currency.
+ */
 export function currenciesIn(text: string): Array<'EUR' | 'PEN'> {
   const found = new Set<'EUR' | 'PEN'>();
   if (/€|\bEUR\b/.test(text)) found.add('EUR');
-  if (/S\/\.?|\bPEN\b/.test(text)) found.add('PEN');
+  const solAfterAmount = /\d[.,]\d{2}\s?[S5$][\/|][.,]?/;
+  const solBeforeAmount = /(?:^|[^\d])[S5$][\/|][.,]?\s?\d/;
+  if (/S\/\.?|\bPEN\b/.test(text) || solAfterAmount.test(text) || solBeforeAmount.test(text)) found.add('PEN');
   return [...found];
 }

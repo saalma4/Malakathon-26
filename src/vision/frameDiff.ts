@@ -33,6 +33,8 @@ export interface MotionResult {
   /** Frame captured at the moment of peak motion (evidence of the reels spinning). */
   peakFrame?: Buffer;
   samples: number[];
+  /** Real time (ms since start) of each sample: grabbing + diffing takes longer than the poll interval. */
+  times: number[];
 }
 
 export interface StableResult {
@@ -40,6 +42,7 @@ export interface StableResult {
   elapsedMs: number;
   frame: Buffer;
   samples: number[];
+  times: number[];
 }
 
 type Grab = () => Promise<Buffer>;
@@ -53,18 +56,20 @@ export async function waitForMotion(grab: Grab, baseline: Buffer, opts: MotionOp
   let peakRatio = 0;
   let peakFrame: Buffer | undefined;
   const samples: number[] = [];
+  const times: number[] = [];
   while (Date.now() - start < timeoutMs) {
     const frame = await grab();
     const r = diffRatio(baseline, frame);
     samples.push(round(r));
+    times.push(Date.now() - start);
     if (r > peakRatio) {
       peakRatio = r;
       peakFrame = frame;
     }
-    if (r >= minRatio) return { moved: true, peakRatio, elapsedMs: Date.now() - start, peakFrame, samples };
+    if (r >= minRatio) return { moved: true, peakRatio, elapsedMs: Date.now() - start, peakFrame, samples, times };
     await sleep(intervalMs);
   }
-  return { moved: false, peakRatio, elapsedMs: Date.now() - start, peakFrame, samples };
+  return { moved: false, peakRatio, elapsedMs: Date.now() - start, peakFrame, samples, times };
 }
 
 /** Polls frames until consecutive frames stop changing for `stableMs`. */
@@ -74,16 +79,18 @@ export async function waitForStable(grab: Grab, opts: StableOptions = {}): Promi
   let prev = await grab();
   let stillSince = Date.now();
   const samples: number[] = [];
+  const times: number[] = [];
   while (Date.now() - start < timeoutMs) {
     await sleep(intervalMs);
     const frame = await grab();
     const r = diffRatio(prev, frame);
     samples.push(round(r));
+    times.push(Date.now() - start);
     if (r > maxRatio) stillSince = Date.now();
     prev = frame;
-    if (Date.now() - stillSince >= stableMs) return { stable: true, elapsedMs: Date.now() - start, frame, samples };
+    if (Date.now() - stillSince >= stableMs) return { stable: true, elapsedMs: Date.now() - start, frame, samples, times };
   }
-  return { stable: false, elapsedMs: Date.now() - start, frame: prev, samples };
+  return { stable: false, elapsedMs: Date.now() - start, frame: prev, samples, times };
 }
 
 /**
@@ -97,10 +104,12 @@ export async function observeMotion(grab: Grab, baseline: Buffer, durationMs: nu
   let peakFrame: Buffer | undefined;
   let prev = baseline;
   const samples: number[] = [];
+  const times: number[] = [];
   while (Date.now() - start < durationMs) {
     const frame = await grab();
     const r = diffRatio(baseline, frame);
     samples.push(round(diffRatio(prev, frame)));
+    times.push(Date.now() - start);
     prev = frame;
     if (r > peakRatio) {
       peakRatio = r;
@@ -108,21 +117,29 @@ export async function observeMotion(grab: Grab, baseline: Buffer, durationMs: nu
     }
     await sleep(intervalMs);
   }
-  return { moved: false, peakRatio, elapsedMs: Date.now() - start, peakFrame, samples };
+  return { moved: false, peakRatio, elapsedMs: Date.now() - start, peakFrame, samples, times };
 }
 
 const round = (n: number) => Math.round(n * 10000) / 10000;
 
 /**
- * Longest run (in ms) of consecutive frame-to-frame changes above `threshold`.
- * Spinning reels give a long run; a dialog fading in gives one or two samples.
+ * Longest run (in real ms) of consecutive frame-to-frame changes above
+ * `threshold`. Spinning reels give a long run; a dialog fading in gives one
+ * or two samples. `times` are the real sample timestamps (or a fixed interval).
  */
-export function longestMotionRunMs(samples: number[], intervalMs: number, threshold = 0.03): number {
+export function longestMotionRunMs(samples: number[], times: number[] | number, threshold = 0.03): number {
+  const at = (i: number) => (typeof times === 'number' ? (i + 1) * times : times[i]);
   let best = 0;
-  let run = 0;
-  for (const s of samples) {
-    run = s > threshold ? run + 1 : 0;
-    best = Math.max(best, run);
+  let runStart = -1;
+  for (let i = 0; i < samples.length; i++) {
+    if (samples[i] > threshold) {
+      if (runStart < 0) runStart = i;
+      // A sample measures change since the previous frame, so the run starts at the previous sample's time.
+      const from = runStart === 0 ? 0 : at(runStart - 1);
+      best = Math.max(best, at(i) - from);
+    } else {
+      runStart = -1;
+    }
   }
-  return best * intervalMs;
+  return best;
 }

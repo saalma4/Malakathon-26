@@ -8,8 +8,6 @@ import type { Language } from '../../src/config/markets';
 import { currencyMatches, messageInLanguage, spinRejected, unchanged } from '../../src/checks/reconcile';
 
 const SAMPLE_MS = 150;
-/** Spinning reels keep the screen changing for well over a second; a dialog appearing does not. */
-const MAX_NON_SPIN_MOTION_MS = 900;
 
 test.describe('Scenario 2 — Insufficient balance', () => {
   test.use({ accountKind: 'empty' });
@@ -45,7 +43,9 @@ test.describe('Scenario 2 — Insufficient balance', () => {
     const baseline = await player.grab();
     await test.step(`Attempt spin (${target.method})`, () => player.pressSpin(target));
     const obs = await test.step('Watch the screen after the attempt', () => observeMotion(player.grab, baseline, 6000, SAMPLE_MS));
-    const reelMotionMs = longestMotionRunMs(obs.samples, SAMPLE_MS);
+    // Spinning reels keep the screen changing for a while; a dialog appearing does not (per-game, see npm run calibrate).
+    const MAX_NON_SPIN_MOTION_MS = player.assets.nonSpinMotionMaxMs;
+    const reelMotionMs = longestMotionRunMs(obs.samples, obs.times, Math.max(0.03, player.assets.stableMaxRatio));
     const spin = oracle.summarizeSince(marker);
     await checks.log('attempt-network.json', spin);
 

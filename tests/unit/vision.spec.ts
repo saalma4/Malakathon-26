@@ -29,6 +29,9 @@ test.describe('frame diff', () => {
     const dialog = [0.0, 0.15, 0.05, 0.0, 0.0, 0.0];
     expect(longestMotionRunMs(reels, 150)).toBe(8 * 150);
     expect(longestMotionRunMs(dialog, 150)).toBe(2 * 150);
+    // Real timestamps: sampling is slower than the nominal interval, the run must use real time.
+    const times = [300, 650, 1000, 1350, 1700, 2050, 2400, 2750, 3100];
+    expect(longestMotionRunMs(reels, times)).toBe(2750);
   });
 });
 
@@ -43,6 +46,26 @@ test.describe('template matching', () => {
     expect(Math.abs(m!.box.x - 700)).toBeLessThanOrEqual(2);
     expect(Math.abs(m!.box.y - 300)).toBeLessThanOrEqual(2);
     expect(m!.score).toBeLessThan(0.05);
+  });
+});
+
+test.describe('masked template matching', () => {
+  // White arrows on a transparent background: what shows through the button must not matter.
+  const arrows = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><path d="M20 40 A20 20 0 0 1 60 40" stroke="#fff" stroke-width="10" fill="none"/><path d="M60 40 L70 30 L50 30 Z" fill="#fff"/></svg>`;
+  const bgSvg = (color: string) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500"><rect width="100%" height="100%" fill="${color}"/><circle cx="200" cy="200" r="60" fill="#8a3"/></svg>`;
+
+  test('finds the control over different backgrounds and rejects a screen without it', async () => {
+    const tpl = await sharp(Buffer.from(arrows)).png().toBuffer();
+    for (const color of ['#5b2a86', '#1a7f37']) {
+      const bg = await sharp(Buffer.from(bgSvg(color))).png().toBuffer();
+      const screen = await sharp(bg).composite([{ input: tpl, left: 600, top: 300 }]).png().toBuffer();
+      const m = await matchTemplate(screen, tpl);
+      expect(Math.abs(m!.box.x - 600)).toBeLessThanOrEqual(2);
+      expect(m!.score).toBeLessThan(0.04);
+    }
+    const without = await sharp(Buffer.from(bgSvg('#5b2a86'))).png().toBuffer();
+    expect((await matchTemplate(without, tpl))!.score).toBeGreaterThan(0.04);
   });
 });
 

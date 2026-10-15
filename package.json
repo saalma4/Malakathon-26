@@ -12,7 +12,9 @@
     "typecheck": "tsc",
     "report": "playwright show-report report/playwright",
     "replay": "tsx scripts/replay.ts",
-    "fun": "tsx scripts/play-fun.ts"
+    "fun": "tsx scripts/play-fun.ts",
+    "calibrate": "tsx scripts/calibrate.ts",
+    "make-template": "tsx scripts/make-template.ts"
   },
   "repository": {
     "type": "git",
