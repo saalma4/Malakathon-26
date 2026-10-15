@@ -106,6 +106,10 @@ main { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .counter span { font-size: 12px; color: var(--muted); }
 .counter.pass b { color: var(--ok); } .counter.fail b { color: var(--ko); }
 
+/* Forced-failure notice */
+.fault-note { border: 1px dashed var(--ko); background: var(--ko-bg); color: var(--fg); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+.fault-note b { color: var(--ko); }
+
 /* Live view */
 .badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
 .badge.live { background: var(--ko); color: #fff; border-color: transparent; }

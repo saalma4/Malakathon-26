@@ -1,4 +1,4 @@
-import type { SessionResult } from './session';
+import { FAULT_DESCRIPTION, type SessionResult } from './session';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
@@ -65,6 +65,7 @@ a{color:inherit}
   <div class="meta">${esc(r.url)}</div>
   ${r.error ? `<div class="err">Error: ${esc(r.error)}</div>` : ''}
 </div>
+${r.fault ? `<div class="banner ko" style="border-style:dashed"><b>${esc(FAULT_DESCRIPTION)}</b> Los fallos de este informe son intencionados.</div>` : ''}
 <div class="grid">
   <div class="card"><h2>Comprobaciones</h2>${checks || '<p class="meta">Sin comprobaciones.</p>'}</div>
   <div class="card"><h2>Vídeo de la sesión</h2>${r.video ? `<video controls preload="metadata" src="${esc(r.video)}"${r.shots.length ? ` poster="${esc(r.shots[r.shots.length - 1].file)}"` : ''}></video>` : '<p class="meta">Sin vídeo.</p>'}

@@ -65,6 +65,16 @@ Al finalizar se presentan:
 
 Cada giro tarda aproximadamente entre 1 y 2 minutos. El servidor se detiene con `Ctrl+C`.
 
+### Demostración de fallos
+
+Para ver cómo se presentan los fallos, en **Juego** se selecciona *Demo con fallos forzados*. Desde la terminal:
+`npm run fun -- demo-fallos --headless`.
+
+El juego se ejecuta de verdad, pero se simula una integración rota: el mercado espera otra moneda y el proveedor cobra
+0,10 más de la apuesta mostrada. Fallan las comprobaciones de moneda, apuesta, saldo y saldo visible. Las de "el giro
+empezó" y "el giro terminó" siguen dependiendo del juego real y pasan. La interfaz y el informe indican de forma visible
+que los fallos son intencionados.
+
 ### Ejecución desde la terminal
 
 ```bash

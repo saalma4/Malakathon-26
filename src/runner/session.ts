@@ -22,11 +22,17 @@ import { currencyMatches, reconcile, spinCompleted, spinStarted, wagerMatches } 
 import { formatCents } from '../util/money';
 import { renderReport } from './report';
 
-export const TARGETS: Record<string, { url: string; game: string; label: string }> = {
+export const TARGETS: Record<string, { url: string; game: string; label: string; fault?: boolean }> = {
   demo: {
     url: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20fruitsw&lang=es&cur=EUR&jurisdiction=99&stylename=generic',
     game: 'sweet-bonanza',
     label: 'Demo Pragmatic Play · Sweet Bonanza (ES/EUR)',
+  },
+  'demo-fallos': {
+    url: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20fruitsw&lang=es&cur=EUR&jurisdiction=99&stylename=generic',
+    game: 'sweet-bonanza',
+    label: 'Demo con fallos forzados (para ver cómo se muestran los fallos)',
+    fault: true,
   },
   betsson: {
     url: 'https://www.betsson.es/casino/tragaperras-slots/bubble-up?gameAction=playforfun',
@@ -45,7 +51,18 @@ export interface SessionOptions {
   headless?: boolean;
   /** Emit a live view frame every N ms (0 = off). */
   liveFrameMs?: number;
+  /**
+   * Forced-failure mode, to see how failures look in the UI and the report.
+   * The game is played for real, but the checks evaluate a simulated broken
+   * integration (see FAULT_DESCRIPTION).
+   */
+  fault?: boolean;
 }
+
+/** Overcharge simulated in forced-failure mode: the provider takes 0,10 more than the wager shown. */
+const FAULT_OVERCHARGE_CENTS = 10;
+export const FAULT_DESCRIPTION =
+  'MODO FALLOS FORZADOS (demostración): el juego es real, pero se simula una integración rota: el mercado espera otra moneda y el proveedor cobra 0,10 más de la apuesta mostrada.';
 
 export interface CheckRow {
   spin: number;
@@ -62,7 +79,7 @@ export interface ShotInfo {
 }
 
 export type SessionEvent =
-  | { type: 'start'; id: string; url: string; market: string; game: string; spins: number; startedAt: string }
+  | { type: 'start'; id: string; url: string; market: string; game: string; spins: number; startedAt: string; fault: boolean }
   | { type: 'step'; text: string; at: string }
   | { type: 'frame'; jpeg: string; at: string }
   | ({ type: 'shot'; at: string } & ShotInfo)
@@ -82,6 +99,8 @@ export interface SessionResult {
   total: number;
   ok: boolean;
   error?: string;
+  /** True when the run used the forced-failure mode (results are a demonstration). */
+  fault: boolean;
   rows: CheckRow[];
   shots: ShotInfo[];
   steps: Array<{ at: string; text: string }>;
@@ -102,6 +121,9 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
   const isBetsson = new URL(url).hostname.endsWith(new URL(market.baseUrl).hostname.replace(/^www\./, ''));
   const money = (c?: number) => (c === undefined ? 'n/a' : formatCents(c, market));
   const marketLabel = isBetsson ? market.name : `Demo · ${market.language.toUpperCase()}/${market.currency.code}`;
+  const fault = !!(opts.fault ?? alias?.fault);
+  // In forced-failure mode the market "expects" the other currency.
+  const expectedCurrency = fault ? (market.currency.code === 'EUR' ? 'PEN' : 'EUR') : market.currency.code;
 
   const startedAt = now();
   const id = `fun-${startedAt.replace(/[:.]/g, '-')}`;
@@ -181,7 +203,8 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
     return new GameView(page, await findGameFrame(page, 90_000));
   };
 
-  emit({ type: 'start', id, url, market: marketLabel, game: market.gameKey, spins, startedAt });
+  emit({ type: 'start', id, url, market: marketLabel, game: market.gameKey, spins, startedAt, fault });
+  if (fault) say(FAULT_DESCRIPTION);
   say(`Juego: ${url}`);
   say(`Mercado: ${marketLabel} · ${spins} giro(s)`);
 
@@ -255,12 +278,18 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
       const spin = oracle.summarizeSince(marker);
       const post = await player.readStateConfirming([spin.balanceAfterCents, spin.winCents || undefined], 3, stable.frame);
 
-      const bet = spin.betCents ?? seenBet?.token.cents;
+      const realBet = spin.betCents ?? seenBet?.token.cents;
       const payout = spin.winCents ?? post.win?.token.cents ?? 0;
       const before = netBefore ?? seenBal?.token.cents;
-      const after = spin.balanceAfterCents ?? post.balance?.token.cents;
-      const afterSeen = player.seen(post, spin.balanceAfterCents) ?? post.balance;
-      const inGame = reconcile(before, bet, payout, after);
+      const realAfter = spin.balanceAfterCents ?? post.balance?.token.cents;
+      // Forced-failure mode: the provider "charged" more than the wager shown, so the
+      // wager used and the resulting balance differ from what the player was told.
+      const bet = fault && realBet !== undefined ? realBet + FAULT_OVERCHARGE_CENTS : realBet;
+      const after = fault && realAfter !== undefined ? realAfter - FAULT_OVERCHARGE_CENTS : realAfter;
+      const shownBet = seenBet?.token.cents ?? realBet;
+      const afterSeen = player.seen(post, after) ?? post.balance;
+      // The player expects: balance before − the wager they saw + the win.
+      const inGame = reconcile(before, fault ? shownBet : bet, payout, after);
       save(
         `spin${i}-after`,
         `Giro ${i} · después (premio ${money(payout)})`,
@@ -272,7 +301,7 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
         i,
       );
 
-      check({ spin: i, check: 'Moneda en el juego', pass: currencyMatches(pre.currencies, market.currency.code), expected: market.currency.code, actual: pre.currencies.join(',') || 'ninguna leída' });
+      check({ spin: i, check: 'Moneda en el juego', pass: currencyMatches(pre.currencies, expectedCurrency), expected: expectedCurrency, actual: pre.currencies.join(',') || 'ninguna leída' });
       check({
         spin: i,
         check: 'El giro empezó (la pantalla reaccionó)',
@@ -292,14 +321,14 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
         spin: i,
         check: 'Saldo en juego = antes − apuesta + premio',
         pass: inGame.pass,
-        expected: `${money(before)} − ${money(bet)} + ${money(payout)} = ${money(inGame.expected)}`,
+        expected: `${money(before)} − ${money(fault ? shownBet : bet)} + ${money(payout)} = ${money(inGame.expected)}`,
         actual: money(after),
       });
       check({
         spin: i,
         check: 'El saldo nuevo se ve en pantalla',
-        pass: spin.balanceAfterCents !== undefined ? !!player.seen(post, spin.balanceAfterCents) : !!post.balance,
-        expected: money(inGame.expected),
+        pass: after !== undefined ? !!player.seen(post, after) : !!post.balance,
+        expected: money(after),
         actual: afterSeen ? `${money(afterSeen.token.cents)} leído por OCR` : 'no encontrado por OCR',
       });
       fs.writeFileSync(path.join(out, `spin${i}-network.json`), JSON.stringify(spin, null, 2));
@@ -336,6 +365,7 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
     total: rows.length,
     ok: !error && rows.length > 0 && passed === rows.length,
     error,
+    fault,
     rows,
     shots,
     steps,
@@ -370,6 +400,7 @@ export function listSessions(): SessionResult[] {
           total: r.total ?? (r.rows ?? []).length,
           ok: r.ok ?? ((r.rows ?? []).length > 0 && (r.rows ?? []).every((x: CheckRow) => x.pass)),
           error: r.error,
+          fault: !!r.fault,
           rows: r.rows ?? [],
           shots: r.shots ?? fs.readdirSync(path.join(RUNS_DIR, d)).filter((f) => f.endsWith('.png')).sort().map((file) => ({ file, title: file.replace(/^\d+-|\.png$/g, '') })),
           steps: r.steps ?? [],

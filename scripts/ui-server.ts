@@ -190,6 +190,17 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+server.on('error', (e: NodeJS.ErrnoException) => {
+  if (e.code === 'EADDRINUSE') {
+    console.error(
+      `El puerto ${PORT} ya está en uso: probablemente ya hay una interfaz abierta en http://${HOST}:${PORT}.\n` +
+        `Ciérrala (Ctrl+C en su terminal) o usa otro puerto: UI_PORT=4322 npm run ui`,
+    );
+    process.exit(1);
+  }
+  throw e;
+});
+
 server.listen(PORT, HOST, () => {
   const url = `http://${HOST}:${PORT}`;
   console.log(`Interfaz lista en ${url}  (Ctrl+C para salir)`);

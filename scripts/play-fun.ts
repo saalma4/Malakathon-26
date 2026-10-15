@@ -4,7 +4,8 @@
  *
  *   npm run fun                       # Bubble Up on betsson.es (play for fun; Betsson asks to log in)
  *   npm run fun -- demo               # Pragmatic Play public demo (Sweet Bonanza, ES/EUR), no login
- *   npm run fun -- <url> [--market=es] [--game=sweet-bonanza] [--headless] [--spins=2]
+ *   npm run fun -- demo-fallos        # same demo with forced failures (to see how failures look)
+ *   npm run fun -- <url> [--market=es] [--game=sweet-bonanza] [--headless] [--spins=2] [--fault]
  *
  * Betsson login: from .env (ES_FUNDED_USER/PASS) or by hand in the window.
  * It happens in a separate, unrecorded browser; the session is kept in
@@ -29,6 +30,7 @@ async function main() {
       market: (flag('market') ?? 'es') as MarketId,
       game: flag('game'),
       headless: flag('headless') === 'true',
+      fault: flag('fault') === 'true' ? true : undefined,
     },
     (e) => {
       if (e.type === 'step') console.log(e.text.startsWith('ERROR') ? `\x1b[31m✘ ${e.text.slice(7)}\x1b[0m` : `\x1b[36m▸\x1b[0m ${e.text}`);

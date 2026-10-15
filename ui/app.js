@@ -96,6 +96,10 @@ function setStatus(text) {
   $('status-text').textContent = text ?? '';
 }
 
+function setFault(on) {
+  $('fault-note').classList.toggle('hidden', !on);
+}
+
 function resetReport() {
   state.rows = [];
   state.shots = [];
@@ -111,10 +115,11 @@ function resetReport() {
 }
 
 function showFinished(r) {
+  setFault(r.fault);
   const base = `/runs/${encodeURIComponent(r.id)}`;
   const failed = r.total - r.passed;
   const title = r.error && !r.total ? '✘ La ejecución no pudo completarse' : r.ok ? `✔ ${r.passed}/${r.total} comprobaciones OK` : `✘ ${failed} de ${r.total} comprobaciones fallan`;
-  const meta = `${r.market ?? ''} · juego ${r.game || '—'} · ${r.spins || '?'} giro(s) · ${Math.round((r.durationMs ?? 0) / 1000)} s${r.error ? ` · Error: ${r.error}` : ''}`;
+  const meta = `${r.fault ? 'FALLOS FORZADOS · ' : ''}${r.market ?? ''} · juego ${r.game || '—'} · ${r.spins || '?'} giro(s) · ${Math.round((r.durationMs ?? 0) / 1000)} s${r.error ? ` · Error: ${r.error}` : ''}`;
   setBanner(r.ok ? 'ok' : 'ko', title, meta);
   $('live-badge').className = `badge ${r.ok ? 'ok' : 'ko'}`;
   $('live-badge').textContent = r.ok ? 'todo OK' : 'con fallos';
@@ -157,6 +162,7 @@ function follow(runId) {
       case 'start':
         // Always the first event, also when the stream is replayed after a reconnect: rebuild from scratch.
         resetReport();
+        setFault(e.fault);
         state.totalSpins = e.spins;
         setBanner('running', 'Probando el juego…', `${e.market} · juego ${e.game} · ${e.spins} giro(s)`);
         break;
