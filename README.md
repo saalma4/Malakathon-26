@@ -74,13 +74,74 @@ npm run fun -- demo --headless --spins=3    # 3 giros
 
 Las evidencias (capturas, vídeo e informe `report.html`) se guardan en `runs/`.
 
-En Windows (sin probar) deben usarse los comandos `npm run …` desde PowerShell. El atajo `./play.sh` requiere bash
-(Linux, macOS o Git Bash).
+El atajo `./play.sh` requiere bash (Linux, macOS o Git Bash). En Windows se usan los comandos `npm run …`.
+
+### Windows
+
+Probado en Windows con PowerShell. Pasos:
+
+**1. Descargar el código.** Con Git:
+
+```powershell
+git clone https://github.com/saalma4/Malakathon-26.git
+cd Malakathon-26
+```
+
+Sin Git, se descarga como ZIP y se trabaja desde dentro de la carpeta `Malakathon-26-main`:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "https://github.com/saalma4/Malakathon-26/archive/refs/heads/main.zip" -OutFile main.zip
+Expand-Archive main.zip -DestinationPath .
+cd Malakathon-26-main
+```
+
+**2. Instalar las dependencias:**
+
+```powershell
+npm ci --no-audit --no-fund
+npx playwright install chromium
+```
+
+**3. Credenciales (solo para juegos dentro de Betsson).** Para la demo de Pragmatic no hacen falta. Para Betsson:
+- Copiar `.env.example` a `.env` (`Copy-Item .env.example .env`) y rellenar las cuentas del mercado que se vaya a usar; por ejemplo, para betsson.es, `ES_FUNDED_USER` y `ES_FUNDED_PASS`. Consulta las notas sobre credenciales al final de esta sección.
+
+**4. Ejecutar la interfaz web:**
+
+```powershell
+npm run ui
+```
+
+Se abre <http://127.0.0.1:4321>; si no se abre solo, hay que entrar a mano, y con `npm run ui -- --no-open` nunca se abre. Se elige el juego en el desplegable **Juego** y se pulsa **Play**. La interfaz siempre se ejecuta sin ventana de navegador (headless): la vista en directo hace sus veces. El servidor se detiene con `Ctrl+C`.
+
+Si se modifica `.env` o el código, hay que reiniciar el servidor, porque no recarga solo. Si un servidor anterior quedó ocupando el puerto:
+
+```powershell
+$p = (Get-NetTCPConnection -LocalPort 4321 -State Listen).OwningProcess | Select-Object -Unique
+Stop-Process -Id $p -Force
+npm run ui
+```
+
+**5. Alternativa desde la terminal:**
+
+```powershell
+npm run fun -- demo                 # demo pública de Pragmatic (Sweet Bonanza), sin login
+npm run fun -- betsson              # Bubble Up en betsson.es, con ventana visible
+npm run fun -- betsson --headless   # sin ventana (necesita credenciales en .env)
+```
+
+Las evidencias (vídeo, capturas y `report.html`) se guardan en `runs\fun-<fecha>\`.
+
+**Notas sobre credenciales:**
+- `.env` está en `.gitignore` y nunca se sube. Las credenciales nunca deben escribirse en `.env.example`, porque ese fichero sí está en el repositorio.
+- Las cuentas de prueba del reto son de betsson.com (`COM_…`) y betsson.pe (`PE_…`), y probablemente no sirvan en betsson.es.
+- Desde España, betsson.com y betsson.pe redirigen a betsson.es: para usarlos hace falta `COM_PROXY` o `PE_PROXY`.
+- Los valores guardados en GitHub Secrets no se pueden leer. Hay que pedir las credenciales a quien las configuró o a los mentores.
 
 ---
 
 ## Índice
 - [Instalación y uso](#instalación-y-uso)
+  - [Windows](#windows)
 1. [Estado actual](#1-estado-actual)
 2. [Cómo funciona](#2-cómo-funciona)
 3. [Requisitos y compatibilidad](#3-requisitos-y-compatibilidad)
@@ -143,8 +204,9 @@ Esto es mucho más fiable. Si no lo encuentra, el resultado es FAIL con la captu
 ## 3. Requisitos y compatibilidad
 
 - **Requisitos:** Git, Node.js 22 o superior y conexión a internet en la primera ejecución. Los datos de idioma del OCR (inglés y español) se guardan en `.cache/tesseract`.
-- **Probado** en Linux: en el equipo de desarrollo (Arch/Omarchy) y en una máquina Ubuntu limpia de GitHub Actions (instalación, typecheck y tests unitarios).
-- **Sin probar** en macOS y Windows. El código no depende del sistema operativo, salvo el atajo `./play.sh`, que es un script de bash.
+- **Probado en Linux:** en el equipo de desarrollo (Arch/Omarchy) y en una máquina Ubuntu limpia de GitHub Actions (instalación, typecheck y tests unitarios).
+- **Probado en Windows:** con PowerShell, la instalación, la interfaz web (`npm run ui`) y la ejecución desde la terminal (`npm run fun`). Los pasos están en [Windows](#windows).
+- **Sin probar en macOS.** El código no depende del sistema operativo, salvo el atajo `./play.sh`, que es un script de bash.
 - **Modo headless recomendado.** El modo con ventana puede fallar en gestores de ventanas en mosaico (por ejemplo, Hyprland), porque la ventana no conserva el tamaño de 1440×900.
 
 ## 4. Modos de uso
