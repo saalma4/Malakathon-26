@@ -4,7 +4,7 @@ import { MARKETS } from '../../src/config/markets';
 import { diffRatio, longestMotionRunMs } from '../../src/vision/frameDiff';
 import { matchTemplate } from '../../src/vision/locate';
 import { annotate } from '../../src/vision/annotate';
-import { findLabeledAmount, findPhrase, guessLanguage, readScreen, terminateOcr, type ScreenText } from '../../src/vision/ocr';
+import { findLabeledAmount, findPhrase, findWord, guessLanguage, readScreen, terminateOcr, type ScreenText } from '../../src/vision/ocr';
 
 /** Renders text onto a dark "game-like" background, as a slot HUD would. */
 async function hud(lines: string[], w = 800, h = 300): Promise<Buffer> {
@@ -82,6 +82,16 @@ test.describe('ocr', () => {
     expect(bet?.token.cents).toBe(20);
     const marked = await annotate(png, [{ box: bal!.line.bbox, label: 'BALANCE', ok: true }]);
     expect(marked.length).toBeGreaterThan(0);
+  });
+
+  test('splash words are matched as whole words only', () => {
+    const line = (text: string) => ({ text, lines: [{ text, confidence: 90, bbox: { x: 0, y: 0, width: 10, height: 10 } }] });
+    const words = MARKETS.es.gameLabels.continue;
+    expect(findWord(line('PULSA PARA CONTINUAR'), words)).toBeDefined();
+    expect(findWord(line('START'), words)).toBeDefined();
+    // Live HUD texts must not look like a splash screen.
+    expect(findWord(line('MANTÉN PULSADO PARA AUTOSTART'), words)).toBeUndefined();
+    expect(findWord(line('PRESS SPACE TO SPIN'), words)).toBeUndefined();
   });
 
   test('phrases and language', () => {

@@ -148,8 +148,9 @@ export function findPhrase(source: ScreenText | string, phrases: string[]): Phra
 
 /** Locates a word on screen (e.g. "CONTINUE" on a splash screen) and returns the centre of its line. */
 export function findWord(screen: ScreenText, words: string[]): OcrLine | undefined {
-  const wanted = words.map(fold);
-  return screen.lines.find((l) => wanted.some((w) => fold(l.text).includes(w)));
+  // Whole words only: "START" must not match a HUD's "AUTOSTART".
+  const wanted = words.map((w) => new RegExp(`(^|[^a-z0-9])${fold(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`));
+  return screen.lines.find((l) => wanted.some((re) => re.test(fold(l.text))));
 }
 
 const STOPWORDS: Record<Language, string[]> = {

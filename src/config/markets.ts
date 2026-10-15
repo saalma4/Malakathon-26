@@ -80,7 +80,8 @@ const GAME_LABELS = {
   balance: ['CREDIT', 'BALANCE', 'CREDITO', 'SALDO'],
   bet: ['BET', 'APUESTA'],
   win: ['WIN', 'GANANCIA', 'PREMIO'],
-  continue: ['CONTINUE', 'CONTINUAR', 'PRESS', 'PULSA', 'CLICK', 'HAZ CLIC', 'TAP', 'START', 'EMPEZAR'],
+  // Splash/intro words only; generic verbs (PRESS, TAP, CLICK) also appear in live HUDs ("PRESS SPACE TO SPIN").
+  continue: ['CONTINUE', 'CONTINUAR', 'START', 'EMPEZAR', 'COMENZAR'],
 };
 
 const UI_EN = {

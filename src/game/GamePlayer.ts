@@ -55,28 +55,29 @@ export class GamePlayer {
       const png = stable.frame;
       if (await isBlank(png)) continue;
 
-      // Splash screens ("CONTINUE", "PULSA PARA CONTINUAR"): find the word on screen and press it.
+      // First: is the game already live? The network saying "loaded" is not enough: the player must see the
+      // HUD (e.g. "CRÉDITO 100,00 €") and the Spin control when we know what it looks like.
       const screen = await readScreen(png);
-      const word = findWord(screen, this.market.gameLabels.continue);
-      if (word) {
-        await this.view.clickAt(word.bbox.x + word.bbox.width / 2, word.bbox.y + word.bbox.height / 2);
-        continue;
-      }
-
-      // The network saying "loaded" is not enough: the player must see the game HUD (e.g. "CRÉDITO 100,00 €"),
-      // and the Spin control when we know what it looks like (intros can show look-alike buttons).
       const L = this.market.gameLabels;
       const hud = findLabeledAmount(screen, L.balance, this.market) || findLabeledAmount(screen, L.bet, this.market);
       const spin = this.assets.spinTemplate ? await matchTemplate(png, this.assets.spinTemplate) : undefined;
+      const spinVisible = !!spin && spin.score <= this.assets.maxScore;
       if (process.env.DEBUG_VISION) {
         fs.mkdirSync('runs', { recursive: true });
         fs.writeFileSync('runs/debug-ready.png', png);
         console.log(`[ready] hud=${hud ? hud.line.text : '-'} spin=${spin ? spin.score.toFixed(3) + '@' + Math.round(spin.center.x) + ',' + Math.round(spin.center.y) : '-'} stable=${stable.stable}`);
       }
-      if (hud && (!this.assets.spinTemplate || (spin && spin.score <= this.assets.maxScore))) return png;
-      // HUD visible = the game is live. Never press anything blindly now: Space/clicks could start a paid spin.
-      if (hud) {
+      if (hud && (!this.assets.spinTemplate || spinVisible)) return png;
+      // HUD or Spin visible = the game is live. Never press anything now: Space or a click could start a paid spin.
+      if (hud || spinVisible) {
         await this.view.page.waitForTimeout(1000);
+        continue;
+      }
+
+      // Only now (an intro is covering the game): a splash word like "CONTINUAR" is pressed where it is seen.
+      const word = findWord(screen, L.continue);
+      if (word) {
+        await this.view.clickAt(word.bbox.x + word.bbox.width / 2, word.bbox.y + word.bbox.height / 2);
         continue;
       }
 
