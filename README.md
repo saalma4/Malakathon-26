@@ -20,7 +20,7 @@ Todo funciona en local y gratis: no usa APIs de IA de pago.
 | Software | Uso | Instalación |
 |---|---|---|
 | Git | Descarga del repositorio | <https://git-scm.com/downloads>. En Linux: `sudo apt install git` (Ubuntu/Debian) o `sudo pacman -S git` (Arch). |
-| Node.js 22 o superior | Ejecución del programa (incluye `npm`) | <https://nodejs.org>, versión LTS. En Linux y macOS también con [nvm](https://github.com/nvm-sh/nvm): `nvm install 22`. |
+| Node.js 22 o superior | Ejecución del programa (incluye `npm`) | <https://nodejs.org>, versión LTS. En Linux también con [nvm](https://github.com/nvm-sh/nvm): `nvm install 22`. |
 
 Comprobación de las versiones instaladas:
 
@@ -42,7 +42,7 @@ En algunas distribuciones de Linux Playwright muestra el aviso `BEWARE: your OS 
 Es informativo: se descarga una compilación compatible. Si faltasen librerías del sistema, se pueden instalar con
 `npx playwright install --with-deps chromium`.
 
-La primera ejecución requiere conexión a internet para cargar el juego y descargar los datos de idioma del OCR.
+Se necesita conexión a internet: el juego se carga desde la web y, en la primera ejecución, se descargan los datos de idioma del OCR.
 
 ### Ejecución
 
@@ -74,7 +74,7 @@ npm run fun -- demo --headless --spins=3    # 3 giros
 
 Las evidencias (capturas, vídeo e informe `report.html`) se guardan en `runs/`.
 
-El atajo `./play.sh` requiere bash (Linux, macOS o Git Bash). En Windows se usan los comandos `npm run …`.
+El atajo `./play.sh` requiere bash (Linux o Git Bash). En Windows se usan los comandos `npm run …`.
 
 ### Windows
 
@@ -103,7 +103,7 @@ npx playwright install chromium
 ```
 
 **3. Credenciales (solo para juegos dentro de Betsson).** Para la demo de Pragmatic no hacen falta. Para Betsson:
-- Copiar `.env.example` a `.env` (`Copy-Item .env.example .env`) y rellenar las cuentas del mercado que se vaya a usar; por ejemplo, para betsson.es, `ES_FUNDED_USER` y `ES_FUNDED_PASS`. Consulta las notas sobre credenciales al final de esta sección.
+- Copiar `.env.example` a `.env` (`Copy-Item .env.example .env`) y rellenar las cuentas del mercado que se vaya a usar; por ejemplo, para betsson.es, `ES_FUNDED_USER` y `ES_FUNDED_PASS`. Véanse las notas sobre credenciales al final de esta sección.
 
 **4. Ejecutar la interfaz web:**
 
@@ -203,10 +203,10 @@ Esto es mucho más fiable. Si no lo encuentra, el resultado es FAIL con la captu
 
 ## 3. Requisitos y compatibilidad
 
-- **Requisitos:** Git, Node.js 22 o superior y conexión a internet en la primera ejecución. Los datos de idioma del OCR (inglés y español) se guardan en `.cache/tesseract`.
+- **Requisitos:** Git, Node.js 22 o superior y conexión a internet (el juego se carga desde la web). Los datos de idioma del OCR (inglés y español) se descargan la primera vez y se guardan en `.cache/tesseract`.
 - **Probado en Linux:** en el equipo de desarrollo (Arch/Omarchy) y en una máquina Ubuntu limpia de GitHub Actions (instalación, typecheck y tests unitarios).
 - **Probado en Windows:** con PowerShell, la instalación, la interfaz web (`npm run ui`) y la ejecución desde la terminal (`npm run fun`). Los pasos están en [Windows](#windows).
-- **Sin probar en macOS.** El código no depende del sistema operativo, salvo el atajo `./play.sh`, que es un script de bash.
+- El código no depende del sistema operativo, salvo el atajo `./play.sh`, que es un script de bash. En Windows se usa `npm run fun`.
 - **Modo headless recomendado.** El modo con ventana puede fallar en gestores de ventanas en mosaico (por ejemplo, Hyprland), porque la ventana no conserva el tamaño de 1440×900.
 
 ## 4. Modos de uso
@@ -217,12 +217,12 @@ Esto es mucho más fiable. Si no lo encuentra, el resultado es FAIL con la captu
 npm run ui                     # abre http://127.0.0.1:4321 en el navegador
 ```
 
-Eliges el juego y el número de giros y pulsas **Play**. Mientras se ejecuta, ves en directo:
+Se selecciona el juego y el número de giros y se pulsa **Play**. Durante la ejecución se muestra en directo:
 - **la vista del juego**, con el paso actual: "Esperando a que el juego sea jugable…", "Giro 2/3"…;
 - **las comprobaciones**, marcadas como correctas (verde) o fallidas (rojo) según se completan, con el valor esperado frente al observado y agrupadas por giro;
 - **las capturas que toma el programa**: juego listo, antes del giro (con el saldo, la apuesta y el botón Spin marcados), rodillos en movimiento y después. Al hacer clic se amplían, y se navega con ← y →.
 
-Al terminar aparece:
+Al terminar se muestra:
 - un resumen en verde ("12/12 comprobaciones OK") o, si hay fallos, en rojo;
 - el **vídeo** de la sesión;
 - enlaces al **informe HTML** (`report.html`, que se puede abrir y compartir sin servidor), a `result.json` y a `network.json`.
@@ -231,7 +231,7 @@ El **historial** de la izquierda reabre cualquier ejecución anterior, también 
 
 Detalles:
 - La interfaz ejecuta siempre en modo *headless*: la vista en directo sustituye a la ventana del navegador.
-- Solo hay una ejecución a la vez. Si recargas la página a mitad, no se pierde nada.
+- Solo se permite una ejecución a la vez. Si se recarga la página durante una ejecución, no se pierde información.
 - Solo escucha en `127.0.0.1`. El puerto se cambia con `UI_PORT=8080 npm run ui`, y `-- --no-open` evita que se abra el navegador.
 
 ### Terminal
@@ -245,13 +245,13 @@ Detalles:
 Cada ejecución imprime un PASS o FAIL por cada comprobación y guarda las evidencias en `runs/fun-<fecha>/`:
 - vídeo `.webm` de la sesión;
 - capturas anotadas: antes del giro, rodillos en movimiento y después;
-- registro de red y `result.json`.
+- registro de red, `result.json` e informe `report.html`.
 
 Ejemplo real:
 
 ```
-▸ Spin localizado por: template en (1158, 812)
-▸ Movimiento: pico 15.3% de píxeles a los 1247 ms
+▸ Spin localizado por template en (1158, 812)
+▸ Movimiento detectado: pico 15.3% de píxeles a los 1247 ms
   ✔ PASS Moneda en el juego — esperado: EUR · visto: EUR
   ✔ PASS El giro empezó (la pantalla reaccionó) — esperado: movimiento + doSpin · visto: 15.3%, doSpin sí
   ✔ PASS El giro terminó — esperado: pantalla quieta + ronda cerrada · visto: quieta tras 12732 ms, ronda cerrada
@@ -403,13 +403,13 @@ npm run calibrate -- demo --headless       # deben cumplirse los 4 criterios
 El workflow es `.github/workflows/validate.yml`:
 1. typecheck y tests unitarios;
 2. un job por mercado con los dos escenarios, Chromium con ventana bajo Xvfb (para WebGL);
-3. un job que fusiona los informes y los publica en **GitHub Pages**, y además escribe la tabla en el Job Summary.
+3. un job que fusiona los informes, escribe la tabla de resultados en el Job Summary, guarda el informe como artefacto `validation-report` y, si GitHub Pages está activado, lo publica.
 
 Antes de lanzarlo:
 - **Secrets** del repositorio: `COM_FUNDED_USER/PASS` y `COM_EMPTY_USER/PASS`.
 - **Geobloqueo:** los runners de GitHub están fuera de los países permitidos. Hay que añadir el secret `COM_PROXY`, o la variable `RUNNER` con la etiqueta de un runner self-hosted.
 - **Pages (opcional):** para publicar el informe en GitHub Pages, un administrador del repositorio debe activar Settings → Pages → Source: "GitHub Actions". Si no está activado, el workflow no falla: el informe se descarga como artefacto `validation-report` desde la página de la ejecución.
-- **Mercados:** en esta PoC (solo EUR), lanzarlo a mano con `markets = ["com"]`.
+- **Mercados:** por defecto solo se ejecuta betsson.com (EUR). Al lanzarlo a mano se puede indicar otra lista en `markets`.
 
 ## 12. Estructura del código
 
