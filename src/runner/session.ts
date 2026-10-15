@@ -102,7 +102,8 @@ export interface SessionResult {
   video?: string;
 }
 
-export const RUNS_DIR = path.resolve('runs');
+/** Where sessions are written. RUNS_DIR overrides it (CI keeps its runs apart from the committed examples). */
+export const RUNS_DIR = path.resolve(process.env.RUNS_DIR ?? 'runs');
 const PROFILE = path.resolve('.cache/browser-profile');
 const now = () => new Date().toISOString();
 

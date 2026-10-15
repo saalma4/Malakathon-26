@@ -1,0 +1,131 @@
+name: Validación del juego
+
+# Validates the checker end to end without credentials, against the public
+# Pragmatic Play demo (a real game, no money):
+#   1. checks       typecheck + unit tests (rules, scenario, server guards, OCR)
+#   2. live-demo    plays the real game: the normal run must pass and the
+#                   forced-failure run must fail (negative control)
+#   3. publish      GitHub Pages, only if Pages is enabled in the repository
+# Scenarios against Betsson accounts run locally (npm run test:com), because
+# they need test credentials and a location Betsson does not geo-block.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      spins:
+        description: 'Giros de la demo (1-5)'
+        default: '2'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Cache OCR language data
+        uses: actions/cache@v4
+        with:
+          path: .cache/tesseract
+          key: tesseract-eng-spa-v1
+      - run: npm run typecheck
+      - run: npx playwright test --project=unit --reporter=list
+
+  live-demo:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RUNS_DIR: ci-runs
+      SPINS: ${{ github.event.inputs.spins || '2' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Cache OCR language data
+        uses: actions/cache@v4
+        with:
+          path: .cache/tesseract
+          key: tesseract-eng-spa-v1
+      - run: npx playwright install --with-deps chromium
+
+      - name: Demo real (debe pasar)
+        id: demo
+        continue-on-error: true
+        run: |
+          case "$SPINS" in [1-5]) ;; *) echo "::error::spins debe estar entre 1 y 5"; exit 1 ;; esac
+          npm run -s fun -- demo --headless --spins="$SPINS"
+
+      - name: Control negativo con fallos forzados (debe fallar)
+        id: negative
+        continue-on-error: true
+        run: |
+          if npm run -s fun -- demo-fallos --headless; then
+            echo "::error::La demo de fallos forzados ha pasado: el checker no detecta los fallos"
+            exit 1
+          fi
+          echo "Control negativo correcto: las comprobaciones fallan como deben."
+
+      - name: Resumen e informe
+        if: always()
+        run: npx tsx scripts/ci-summary.ts --site=site
+
+      - name: Subir evidencias
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-validacion
+          path: site/
+          retention-days: 14
+
+      - name: Subir informe para Pages
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+
+      - name: Resultado
+        if: always()
+        run: |
+          echo "Demo real: ${{ steps.demo.outcome }} · Control negativo: ${{ steps.negative.outcome }}"
+          [ "${{ steps.demo.outcome }}" = success ] && [ "${{ steps.negative.outcome }}" = success ]
+
+  publish:
+    needs: live-demo
+    if: always() && needs.live-demo.result != 'skipped' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      # Pages needs a repository admin to enable it (Settings → Pages → Source: GitHub Actions).
+      # Without it the report stays available as the "informe-validacion" artifact.
+      - name: Comprobar si GitHub Pages está activado
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" >/dev/null 2>&1; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=GitHub Pages no activado::El informe está en el artefacto 'informe-validacion'."
+          fi
+      - if: steps.pages.outputs.enabled == 'true'
+        id: deploy
+        uses: actions/deploy-pages@v4

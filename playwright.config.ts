@@ -3,7 +3,6 @@ import { defineConfig, devices } from '@playwright/test';
 import { MARKETS, proxyFor, type MarketId } from './src/config/markets';
 import type { Options } from './tests/fixtures';
 
-const CI = !!process.env.CI;
 const headless = process.env.HEADED !== '1';
 
 export default defineConfig<Options>({
@@ -15,7 +14,7 @@ export default defineConfig<Options>({
   retries: 0,
   reporter: [
     ['list'],
-    CI ? ['blob'] : ['html', { open: 'never', outputFolder: 'report/playwright' }],
+    ['html', { open: 'never', outputFolder: 'report/playwright' }],
     ['./src/reporter/summary.ts'],
   ],
   use: {
