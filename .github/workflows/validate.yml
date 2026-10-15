@@ -1,0 +1,112 @@
+name: Game validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      markets:
+        description: 'Markets to run (JSON list)'
+        default: '["com","pe"]'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  # Same test accounts: never run two validations at once.
+  group: game-validation
+  cancel-in-progress: false
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx playwright test --project=unit --reporter=list
+
+  validate:
+    needs: unit
+    name: validate (${{ matrix.market }})
+    # Betsson sites geo-redirect: use a proxy secret per market, or set the repo
+    # variable RUNNER to a self-hosted runner label located in an allowed country.
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        market: ${{ fromJSON(github.event.inputs.markets || '["com","pe"]') }}
+    env:
+      CI: 'true'
+      HEADED: '1'
+      COM_FUNDED_USER: ${{ secrets.COM_FUNDED_USER }}
+      COM_FUNDED_PASS: ${{ secrets.COM_FUNDED_PASS }}
+      COM_EMPTY_USER: ${{ secrets.COM_EMPTY_USER }}
+      COM_EMPTY_PASS: ${{ secrets.COM_EMPTY_PASS }}
+      PE_FUNDED_USER: ${{ secrets.PE_FUNDED_USER }}
+      PE_FUNDED_PASS: ${{ secrets.PE_FUNDED_PASS }}
+      PE_EMPTY_USER: ${{ secrets.PE_EMPTY_USER }}
+      PE_EMPTY_PASS: ${{ secrets.PE_EMPTY_PASS }}
+      COM_PROXY: ${{ secrets.COM_PROXY }}
+      PE_PROXY: ${{ secrets.PE_PROXY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Cache OCR language data
+        uses: actions/cache@v4
+        with:
+          path: .cache/tesseract
+          key: tesseract-eng-spa-v1
+      - run: npx playwright install --with-deps chromium
+      - name: Run both scenarios on ${{ matrix.market }}
+        # Headed under a virtual display so WebGL games render like for a real player.
+        run: xvfb-run -a --server-args="-screen 0 1920x1080x24" npx playwright test --project=betsson-${{ matrix.market }}
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-${{ matrix.market }}
+          path: blob-report/
+          retention-days: 14
+
+  report:
+    needs: validate
+    if: always()
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: blob-*
+          path: all-blob-reports
+          merge-multiple: true
+      - name: Merge reports (HTML + pass/fail matrix)
+        run: npx playwright merge-reports --config merge.config.ts ./all-blob-reports
+      - name: Build site
+        run: |
+          mkdir -p site
+          cp -r report/playwright site/playwright
+          cp report/summary.html site/index.html
+          cp report/summary.md report/summary.json site/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: deploy
+        uses: actions/deploy-pages@v4
