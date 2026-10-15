@@ -67,7 +67,7 @@ a{color:inherit}
 </div>
 <div class="grid">
   <div class="card"><h2>Comprobaciones</h2>${checks || '<p class="meta">Sin comprobaciones.</p>'}</div>
-  <div class="card"><h2>Vídeo de la sesión</h2>${r.video ? `<video controls src="${esc(r.video)}"></video>` : '<p class="meta">Sin vídeo.</p>'}
+  <div class="card"><h2>Vídeo de la sesión</h2>${r.video ? `<video controls preload="metadata" src="${esc(r.video)}"${r.shots.length ? ` poster="${esc(r.shots[r.shots.length - 1].file)}"` : ''}></video>` : '<p class="meta">Sin vídeo.</p>'}
     <h2 style="margin-top:18px">Pasos</h2><ul class="steps">${steps}</ul></div>
 </div>
 <div class="card" style="margin-top:20px"><h2>Capturas (${r.shots.length})</h2><div class="shots">${shots}</div></div>

@@ -120,6 +120,8 @@ function showFinished(r) {
   $('live-badge').textContent = r.ok ? 'todo OK' : 'con fallos';
   setStatus('');
   if (r.video) {
+    const last = r.shots?.[r.shots.length - 1];
+    if (last) $('video').poster = `${base}/${encodeURIComponent(last.file)}`;
     $('video').src = `${base}/${encodeURIComponent(r.video)}`;
     $('video-card').classList.remove('hidden');
   }

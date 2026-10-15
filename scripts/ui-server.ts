@@ -40,6 +40,8 @@ interface LiveRun {
 }
 
 let current: LiveRun | undefined;
+/** Set from the moment Play is pressed until the session ends (closes the race before the "start" event). */
+let busy = false;
 const recent = new Map<string, LiveRun>();
 
 function json(res: http.ServerResponse, status: number, body: unknown) {
@@ -125,10 +127,12 @@ async function startRun(body: Record<string, unknown>): Promise<string> {
           for (const c of run.clients) c.end();
           run.clients.clear();
           if (current === run) current = undefined;
+          busy = false;
         }
       },
     ).catch((err) => {
       if (current === run) current = undefined;
+      busy = false;
       reject(err);
     });
   });
@@ -143,9 +147,15 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { running: current?.id ?? null, targets: Object.entries(TARGETS).map(([id, t]) => ({ id, label: t.label })) });
     }
     if (req.method === 'POST' && u.pathname === '/api/run') {
-      if (current) return json(res, 409, { error: 'Ya hay una ejecución en curso', running: current.id });
-      const id = await startRun(await readBody(req));
-      return json(res, 200, { id });
+      if (busy) return json(res, 409, { error: 'Ya hay una ejecución en curso', running: current?.id ?? null });
+      busy = true;
+      try {
+        const id = await startRun(await readBody(req));
+        return json(res, 200, { id });
+      } catch (e) {
+        busy = false;
+        throw e;
+      }
     }
     if (req.method === 'GET' && u.pathname === '/api/runs') {
       return json(res, 200, listSessions().map(({ steps: _s, rows: _r, ...summary }) => summary));

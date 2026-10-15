@@ -10,7 +10,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
-import { chromium, type BrowserContext, type Page } from '@playwright/test';
+import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { credentialsFor, getMarket, type Market, type MarketId } from '../config/markets';
 import { BetssonPage } from '../pages/BetssonPage';
 import { PragmaticOracle } from '../oracle/pragmatic';
@@ -101,6 +101,7 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
   const headless = opts.headless ?? true;
   const isBetsson = new URL(url).hostname.endsWith(new URL(market.baseUrl).hostname.replace(/^www\./, ''));
   const money = (c?: number) => (c === undefined ? 'n/a' : formatCents(c, market));
+  const marketLabel = isBetsson ? market.name : `Demo · ${market.language.toUpperCase()}/${market.currency.code}`;
 
   const startedAt = now();
   const id = `fun-${startedAt.replace(/[:.]/g, '-')}`;
@@ -129,34 +130,40 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
     emit({ type: 'check', ...row, at: now() });
   };
 
-  const launch = (recordVideo: boolean): Promise<BrowserContext> =>
-    chromium.launchPersistentContext(PROFILE, {
-      channel: 'chromium',
-      headless,
-      viewport: { width: 1440, height: 900 },
-      locale: market.locale,
-      timezoneId: market.timezoneId,
-      ...(recordVideo ? { recordVideo: { dir: out, size: { width: 1440, height: 900 } } } : {}),
-    });
+  const contextOptions = { viewport: { width: 1440, height: 900 }, locale: market.locale, timezoneId: market.timezoneId };
 
-  /** Betsson login with no recording at all; the session stays in the browser profile. */
-  const ensureBetssonLogin = async () => {
-    const ctx = await launch(false);
+  /**
+   * Betsson login with no recording at all. Only this short phase uses the
+   * persistent profile (so you log in once); the session cookies are then
+   * handed to a fresh, recorded context. Sessions never share a browser.
+   */
+  const ensureBetssonLogin = async (): Promise<Awaited<ReturnType<BrowserContext['storageState']>>> => {
+    let ctx: BrowserContext;
+    try {
+      ctx = await chromium.launchPersistentContext(PROFILE, { channel: 'chromium', headless, ...contextOptions });
+    } catch (e) {
+      if (/ProcessSingleton|already in use/i.test(String(e))) throw new Error('El perfil de Betsson (.cache/browser-profile) está en uso por otra ejecución: espera a que termine.');
+      throw e;
+    }
     try {
       const page = ctx.pages()[0] ?? (await ctx.newPage());
       const betsson = new BetssonPage(page, market);
       await betsson.goto('/');
-      if (await betsson.isLoggedIn()) return say('Sesión de Betsson ya iniciada (perfil guardado).');
-      const creds = credentialsFor(market, 'funded');
-      if (creds) {
-        say(`Iniciando sesión en ${market.name} con las credenciales del .env…`);
-        await betsson.login(creds);
+      if (await betsson.isLoggedIn()) {
+        say('Sesión de Betsson ya iniciada (perfil guardado).');
       } else {
-        if (headless) throw new Error(`Sin sesión y sin ${market.envPrefix}_FUNDED_USER/PASS en .env: no se puede iniciar sesión en modo headless.`);
-        say('Inicia sesión A MANO en la ventana (tienes 5 min). No se graba nada.');
-        await betsson.headerLoginButton().first().waitFor({ state: 'hidden', timeout: 5 * 60_000 });
+        const creds = credentialsFor(market, 'funded');
+        if (creds) {
+          say(`Iniciando sesión en ${market.name} con las credenciales del .env…`);
+          await betsson.login(creds);
+        } else {
+          if (headless) throw new Error(`Sin sesión y sin ${market.envPrefix}_FUNDED_USER/PASS en .env: no se puede iniciar sesión en modo headless.`);
+          say('Inicia sesión A MANO en la ventana (tienes 5 min). No se graba nada.');
+          await betsson.headerLoginButton().first().waitFor({ state: 'hidden', timeout: 5 * 60_000 });
+        }
+        say('Sesión iniciada.');
       }
-      say('Sesión iniciada.');
+      return await ctx.storageState();
     } finally {
       await ctx.close();
     }
@@ -174,10 +181,11 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
     return new GameView(page, await findGameFrame(page, 90_000));
   };
 
-  emit({ type: 'start', id, url, market: market.name, game: market.gameKey, spins, startedAt });
+  emit({ type: 'start', id, url, market: marketLabel, game: market.gameKey, spins, startedAt });
   say(`Juego: ${url}`);
-  say(`Mercado: ${market.name} (${market.language}/${market.currency.code}) · ${spins} giro(s)`);
+  say(`Mercado: ${marketLabel} · ${spins} giro(s)`);
 
+  let browser: Browser | undefined;
   let ctx: BrowserContext | undefined;
   let page: Page | undefined;
   let view: GameView | undefined;
@@ -204,9 +212,10 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
   };
 
   try {
-    if (isBetsson) await ensureBetssonLogin();
-    ctx = await launch(true);
-    page = ctx.pages()[0] ?? (await ctx.newPage());
+    const storageState = isBetsson ? await ensureBetssonLogin() : undefined;
+    browser = await chromium.launch({ channel: 'chromium', headless });
+    ctx = await browser.newContext({ ...contextOptions, storageState, recordVideo: { dir: out, size: { width: 1440, height: 900 } } });
+    page = await ctx.newPage();
     oracle = new PragmaticOracle().attach(page);
     void liveLoop();
 
@@ -303,6 +312,7 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
     live = false;
     if (oracle) fs.writeFileSync(path.join(out, 'network.json'), JSON.stringify(oracle.events, null, 2));
     await ctx?.close().catch(() => undefined);
+    await browser?.close().catch(() => undefined);
   }
 
   // The video file is written when the context closes; keep the biggest one (the game page).
@@ -316,7 +326,7 @@ export async function runSession(opts: SessionOptions, emit: (e: SessionEvent) =
   const result: SessionResult = {
     id,
     url,
-    market: market.name,
+    market: marketLabel,
     game: market.gameKey,
     spins,
     startedAt,

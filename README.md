@@ -89,7 +89,30 @@ La primera vez que se usa el OCR se descargan los datos de idioma (inglés y esp
 
 ## 4. Uso rápido
 
-### Ver el programa jugando contra un juego real, sin cuenta ni dinero
+### Interfaz web (la forma más cómoda)
+
+```bash
+npm run ui                     # abre http://127.0.0.1:4321 en el navegador
+```
+
+Eliges el juego y el número de giros y pulsas **▶ Play**. Mientras se ejecuta, ves en directo:
+- **la vista del juego**, con el paso actual: "Esperando a que el juego sea jugable…", "Giro 2/3"…;
+- **las comprobaciones**, con un ✔ verde o un ✘ rojo según van saliendo, y el valor esperado frente al visto, agrupadas por giro;
+- **las capturas que toma el programa**: juego listo, antes del giro (con el saldo, la apuesta y el botón Spin marcados), rodillos en movimiento y después. Al hacer clic se amplían, y se navega con ← y →.
+
+Al terminar aparece:
+- un banner verde ("✔ 12/12 comprobaciones OK") o rojo con los fallos;
+- el **vídeo** de la sesión;
+- enlaces al **informe HTML** (`report.html`, que se puede abrir y compartir sin servidor), a `result.json` y a `network.json`.
+
+El **historial** de la izquierda reabre cualquier ejecución anterior, también las lanzadas desde la terminal.
+
+Detalles:
+- La interfaz ejecuta siempre en modo *headless*: la vista en directo sustituye a la ventana del navegador.
+- Solo hay una ejecución a la vez. Si recargas la página a mitad, no se pierde nada.
+- Solo escucha en `127.0.0.1`. El puerto se cambia con `UI_PORT=8080 npm run ui`, y `-- --no-open` evita que se abra el navegador.
+
+### Ver el programa jugando desde la terminal
 
 ```bash
 ./play.sh demo                 # demo pública de Pragmatic Play (Sweet Bonanza, español, EUR)
@@ -213,6 +236,7 @@ npm run calibrate -- demo --headless       # los 4 criterios en ✔
 
 | Comando | Para qué |
 |---|---|
+| `npm run ui` | interfaz web: Play, vista en directo, comprobaciones, capturas, vídeo e historial |
 | `./play.sh` / `npm run fun -- <url\|demo>` | jugar en vivo y comprobar paso a paso (`--spins`, `--game`, `--market`, `--headless`) |
 | `npm run calibrate -- <url\|demo> [--game=]` | medir el movimiento en reposo frente a un giro y sugerir umbrales para `game.json`; también es un control negativo (reposo ≠ giro) |
 | `npm run make-template -- <png> <x> <y> <w> <h> <salida.png>` | recortar un botón de una captura real como plantilla con máscara (solo los trazos claros) |
@@ -271,6 +295,10 @@ Antes de lanzarlo:
 src/config/markets.ts       configuración por mercado
 src/pages/BetssonPage.ts    lobby, login, saldo de la cabecera y apertura del juego (DOM de Betsson)
 src/game/GamePlayer.ts      juega como una persona: espera a que esté listo, lee la pantalla, localiza y pulsa Spin
+src/runner/session.ts       motor de una sesión de juego (eventos: paso, frame, captura, comprobación, fin), común a CLI e interfaz
+src/runner/report.ts        informe HTML autónomo por ejecución (runs/<id>/report.html)
+scripts/ui-server.ts        servidor local de la interfaz (API, eventos en vivo por SSE, ficheros de evidencias)
+ui/                         interfaz web (HTML/CSS/JS sin compilación)
 src/vision/capture.ts       captura de la zona del juego y clics por coordenadas
 src/vision/frameDiff.ts     movimiento: empezó / se paró / no giró (con tiempos reales)
 src/vision/ocr.ts           OCR local + confirmación de importes, etiquetas, frases e idioma
