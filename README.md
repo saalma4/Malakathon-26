@@ -6,7 +6,7 @@ rodillos, lee lo que se muestra (saldo, apuesta, premio, moneda, mensajes) y com
 
 > **saldo después = saldo antes − apuesta + premio**
 
-Todo funciona en local y gratis: no usa APIs de IA de pago.
+Todo funciona en local y gratis: no usa APIs de IA de pago. La primera vez se descargan de internet el navegador y los datos de idioma del OCR.
 
 > **Alcance de esta PoC: euros (EUR).** Mercados en EUR: betsson.com (inglés) y betsson.es (español, solo desarrollo).
 > El soporte de otras divisas (PEN para betsson.pe) está esbozado en el código, pero **no está validado**: queda para una fase posterior.
@@ -288,7 +288,7 @@ hay que iniciarla una vez.
 
 ```bash
 cp .env.example .env           # rellenar las cuentas de prueba (nunca subir .env)
-npm run test:unit              # 28 tests, sin cuenta
+npm run test:unit              # 42 tests, sin cuenta
 npm run test:es                # escenarios 1 y 2 en betsson.es
 npm run test:com               # escenarios 1 y 2 en betsson.com (EN/EUR); necesita estar en un país permitido o un proxy
 HEADED=1 npm run test:com      # verlo jugar
@@ -309,7 +309,8 @@ Todas las reglas de PASS/FAIL son funciones puras en `src/checks/reconcile.ts`, 
 | `S1.spin-started` | el giro empezó: la pantalla cambió tras el clic (y el proveedor recibió un `doSpin`) | pantalla + red |
 | `S1.spin-completed` | el giro terminó: pantalla quieta y ronda cerrada | pantalla + red |
 | `S1.wager` | la apuesta mostrada es la usada | pantalla + red |
-| `S1.ingame-balance` | saldo en juego después = antes − apuesta + premio, **y se ve en pantalla** | pantalla + red |
+| `S1.ingame-balance` | saldo en juego después = antes − apuesta mostrada + premio (si el premio no se puede leer, falla: nunca se supone 0) | pantalla + red |
+| `S1.ingame-balance-visible` | el saldo nuevo **se ve en pantalla** | pantalla |
 | `S1.betsson-reconcile` | saldo Betsson después = antes − apuesta + premio | Betsson + red |
 
 **Escenario 2: saldo insuficiente** (`tests/e2e/s2-insufficient-balance.spec.ts`)
@@ -331,7 +332,7 @@ La verificación se hizo el 15 de octubre de 2026 contra la demo pública de Pra
 | # | Prueba | Resultado |
 |---|---|---|
 | 1 | Typecheck (`npm run typecheck`) | sin errores |
-| 2 | Tests unitarios (`npm run test:unit`) | **28/28** |
+| 2 | Tests unitarios (`npm run test:unit`) | **42/42** (28 en la verificación inicial; ampliados tras la revisión de código) |
 | 3 | Inyección de fallos (`tests/unit/checks.spec.ts`): saldo descuadrado por 1 céntimo, premio anunciado pero no abonado, cartera sin actualizar, apuesta mostrada ≠ usada, moneda incorrecta o mezclada, clic sin reacción, rodillos que no paran, giro aceptado sin saldo, mensaje en otro idioma, valor en pantalla ≠ real | todos dan **FAIL**, como deben |
 | 4 | Calibración en vivo (`npm run calibrate -- demo`): reposo frente a giro | 4/4: reposo 5,2 % de cambio y 0 s de movimiento sostenido; giro 31,7 % y 4,4 s |
 | 5 | En vivo, español/EUR, 5 giros (`./play.sh demo --spins=5`) | **30/30**, incluido un premio de 5,30 € con cascadas |
@@ -341,7 +342,7 @@ La verificación se hizo el 15 de octubre de 2026 contra la demo pública de Pra
 | 9 | Plantilla del Spin sobre fotogramas reales | botón quieto: 0,000–0,019 (encontrado); intro con botón parecido: 0,068 (rechazado); rodillos girando: ≥ 0,066 (rechazado). Umbral 0,04 |
 | 10 | Login de betsson.es con un usuario falso | rechazado y detectado, sin filtrar nada |
 | 11 | Geobloqueo: betsson.com/.pe desde España | detectado, con un mensaje que indica el proxy a configurar |
-| 12 | Secretos: búsqueda en los ficheros versionados, `.gitignore` y tokens de sesión en los logs | nada versionado; `.env`, `runs/`, `discovery/`, `.cache/` y `report/` ignorados; `mgckey` enmascarado (15/15) |
+| 12 | Secretos: búsqueda en los ficheros versionados, `.gitignore` y tokens de sesión en los logs | nada versionado; `.env`, `runs/` (salvo dos ejecuciones de ejemplo), `discovery/`, `.cache/` y `report/` ignorados; `mgckey` enmascarado (15/15) |
 | 13 | YAML del workflow | válido (jobs `unit`, `validate`, `report`) |
 
 **Fallos reales que encontró la verificación y que están corregidos:**
@@ -406,13 +407,14 @@ npm run calibrate -- demo --headless       # deben cumplirse los 4 criterios
 - No hay credenciales en el repositorio: vienen de variables de entorno o de GitHub Secrets.
 - **El login va en un contexto de navegador sin vídeo ni trace.** Solo la sesión pasa al contexto que graba, así que lo que se teclea no aparece en las evidencias.
 - Los traces están desactivados por defecto, porque contienen cookies. Los tokens de sesión del proveedor (`mgckey`) se enmascaran en todos los logs.
-- `runs/`, `discovery/`, `report/` y `.cache/` (perfil del navegador con la sesión) están en `.gitignore`.
+- `runs/`, `discovery/`, `report/` y `.cache/` (perfil del navegador con la sesión) están en `.gitignore`. Excepción: dos ejecuciones de ejemplo de la demo pública (una correcta y una con fallos forzados) se versionan como evidencia; no contienen datos de cuenta y los tokens de sesión están enmascarados.
+- El servidor de la interfaz solo escucha en `127.0.0.1`, rechaza peticiones de otros orígenes (CSRF) o con otro `Host` (DNS rebinding) y valida todas las entradas.
 
 ## 11. GitHub Actions
 
 El workflow es `.github/workflows/validate.yml`:
-1. typecheck y tests unitarios;
-2. un job por mercado con los dos escenarios, Chromium con ventana bajo Xvfb (para WebGL);
+1. typecheck y tests unitarios, en cada push a `main`;
+2. un job por mercado con los dos escenarios, Chromium con ventana bajo Xvfb (para WebGL). Como juega giros reales con las cuentas de prueba, **solo se ejecuta al lanzarlo a mano** (Actions → Game validation → Run workflow);
 3. un job que fusiona los informes, escribe la tabla de resultados en el Job Summary, guarda el informe como artefacto `validation-report` y, si GitHub Pages está activado, lo publica.
 
 Antes de lanzarlo:
@@ -437,11 +439,14 @@ src/vision/ocr.ts           OCR local + confirmación de importes, etiquetas, fr
 src/vision/locate.ts        template matching con máscara (coarse-to-fine con varios candidatos)
 src/vision/annotate.ts      capturas anotadas (evidencia)
 src/oracle/pragmatic.ts     oráculo de red de Pragmatic (cascadas, collect; tokens enmascarados)
+src/scenarios/spin.ts       escenario 1 común a CLI, interfaz y tests e2e: observeSpin → extractFacts → evaluateSpin (+ applyFault)
+src/server/security.ts      protecciones del servidor local (Host, Origin, rangos, rutas), con tests
+src/util/                   importes (money), argumentos de CLI (cli), escape HTML (html)
 src/checks/reconcile.ts     reglas PASS/FAIL puras
 src/checks/CheckRecorder.ts comprobaciones con nombre + evidencias → checks.json
 src/reporter/summary.ts     matriz PASS/FAIL → HTML, Markdown y Job Summary
 tests/e2e/                  escenarios 1 y 2 (necesitan cuenta)
-tests/unit/                 28 tests sin navegador ni cuenta (incluida la inyección de fallos)
+tests/unit/                 42 tests sin navegador ni cuenta (inyección de fallos, escenario 1, servidor, CLI)
 scripts/                    play-fun, calibrate, make-template, discover, replay
 assets/games/<juego>/       spin.png (plantilla) + game.json (umbrales calibrados)
 ```
@@ -451,7 +456,7 @@ assets/games/<juego>/       spin.png (plantilla) + game.json (umbrales calibrado
 - **Solo EUR validado.** El código de PEN existe pero no está probado de punta a punta.
 - **Escenarios formales sin ejecutar con cuenta real.** Lo que depende de Betsson (saldo de la cabecera, sincronización de la cartera, mensaje de saldo insuficiente) está implementado pero pendiente de las credenciales de prueba.
 - **Un juego calibrado:** Sweet Bonanza. Bubble Up (el contenedor de betsson.es) necesita su plantilla y calibración (sección 8). Además puede no ser de Pragmatic; en ese caso la verificación cruzada por red no aplica, pero la visión sigue funcionando.
-- **OCR:** confirma bien valores conocidos, pero las lecturas a ciegas de fuentes muy decoradas pueden fallar. Por eso, sin el oráculo de red, algunas comprobaciones son menos robustas.
+- **OCR:** confirma bien valores conocidos, pero las lecturas a ciegas de fuentes muy decoradas pueden fallar. Con saldos grandes puede confundir dígitos (por ejemplo, leer "N00.018,0" en lugar de "100.018,50"); en ese caso "El saldo nuevo se ve en pantalla" da FAIL, nunca un PASS falso.
 - **Free spins y bonus:** si un giro activa tiradas gratis, la ronda puede no cerrarse en el tiempo previsto, y la comprobación lo marcará como FAIL.
 
 ## 14. Solución de problemas
