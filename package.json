@@ -10,7 +10,8 @@
     "test:es": "playwright test --project=betsson-es",
     "discover": "tsx scripts/discover.ts",
     "typecheck": "tsc",
-    "report": "playwright show-report report/playwright"
+    "report": "playwright show-report report/playwright",
+    "replay": "tsx scripts/replay.ts"
   },
   "repository": {
     "type": "git",

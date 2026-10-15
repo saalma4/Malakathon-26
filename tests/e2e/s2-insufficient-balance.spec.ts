@@ -5,6 +5,7 @@ import { annotate } from '../../src/vision/annotate';
 import { findPhrase, guessLanguage, readScreen, type ScreenText } from '../../src/vision/ocr';
 import { currenciesIn, formatCents as fmt } from '../../src/util/money';
 import type { Language } from '../../src/config/markets';
+import { currencyMatches, messageInLanguage, spinRejected, unchanged } from '../../src/checks/reconcile';
 
 const SAMPLE_MS = 150;
 /** Spinning reels keep the screen changing for well over a second; a dialog appearing does not. */
@@ -23,7 +24,7 @@ test.describe('Scenario 2 — Insufficient balance', () => {
     await checks.check({
       id: 'S2.betsson-currency',
       title: 'Betsson balance is shown in the market currency',
-      pass: betssonBefore?.currency === market.currency.code,
+      pass: currencyMatches(betssonBefore?.currency ? [betssonBefore.currency] : [], market.currency.code),
       expected: market.currency.code,
       actual: betssonBefore ? `${betssonBefore.text} (${betssonBefore.currency ?? '?'})` : 'balance not found in header',
       sources: ['betsson-ui'],
@@ -51,7 +52,7 @@ test.describe('Scenario 2 — Insufficient balance', () => {
     await checks.check({
       id: 'S2.spin-rejected',
       title: 'The attempted spin is rejected (no paid spin)',
-      pass: reelMotionMs < MAX_NON_SPIN_MOTION_MS && !spin.accepted,
+      pass: spinRejected({ reelMotionMs, maxNonSpinMotionMs: MAX_NON_SPIN_MOTION_MS, spinAccepted: spin.accepted }),
       expected: `no sustained reel motion (< ${MAX_NON_SPIN_MOTION_MS} ms)` + (oracle.detected ? ' and no accepted doSpin' : ''),
       actual: `longest motion ${reelMotionMs} ms` + (oracle.detected ? `, doSpin ${spin.requested ? (spin.accepted ? 'ACCEPTED' : `rejected ${spin.errorText ?? ''}`) : 'not sent'}` : ''),
       sources: oracle.detected ? ['screen', 'network'] : ['screen'],
@@ -86,7 +87,7 @@ test.describe('Scenario 2 — Insufficient balance', () => {
     await checks.check({
       id: 'S2.message-language',
       title: `The message is in the expected language (${market.language})`,
-      pass: !!expectedHit && !otherHit && guessed !== other,
+      pass: messageInLanguage({ expected: market.language, expectedPhraseFound: !!expectedHit, otherPhraseFound: !!otherHit, guessed }),
       expected: market.language,
       actual: `${expectedHit ? market.language + ' phrase found' : 'no expected-language phrase'}; ${otherHit ? other + ' phrase found' : 'no ' + other + ' phrase'}; stopwords → ${guessed ?? 'undetermined'}`,
       sources: ['screen'],
@@ -96,7 +97,7 @@ test.describe('Scenario 2 — Insufficient balance', () => {
     await checks.check({
       id: 'S2.game-currency',
       title: 'Currency shown inside the game matches the market',
-      pass: gameCurrencies.includes(market.currency.code) && gameCurrencies.length === 1,
+      pass: currencyMatches(gameCurrencies, market.currency.code),
       expected: market.currency.code,
       actual: gameCurrencies.join(', ') || 'no currency symbol read on screen',
       sources: ['screen'],
@@ -109,7 +110,7 @@ test.describe('Scenario 2 — Insufficient balance', () => {
     await checks.check({
       id: 'S2.ingame-balance-unchanged',
       title: 'In-game balance does not change',
-      pass: inGameBefore !== undefined && inGameAfter === inGameBefore,
+      pass: unchanged(inGameBefore, inGameAfter),
       expected: money(inGameBefore),
       actual: money(inGameAfter),
       sources: oracle.detected ? ['screen', 'network'] : ['screen'],
@@ -122,7 +123,7 @@ test.describe('Scenario 2 — Insufficient balance', () => {
     await checks.check({
       id: 'S2.betsson-balance-unchanged',
       title: 'Betsson balance does not change',
-      pass: !!betssonBefore && betssonAfter?.cents === betssonBefore.cents,
+      pass: unchanged(betssonBefore?.cents, betssonAfter?.cents),
       expected: money(betssonBefore?.cents),
       actual: betssonAfter ? `${money(betssonAfter.cents)} (header: ${betssonAfter.text})` : 'balance not found in header',
       sources: ['betsson-ui'],

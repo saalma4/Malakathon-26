@@ -38,10 +38,11 @@ src/pages/BetssonPage.ts   Betsson lobby/login/header balance/game launch
 src/game/GamePlayer.ts     plays like a person: wait until playable, read screen, find & press Spin
 src/vision/                capture (pixels of the game), frameDiff, ocr, locate (template), annotate
 src/oracle/pragmatic.ts    provider network cross-check (tokens masked)
-src/checks/                CheckRecorder: named checks + evidence → checks.json
+src/checks/                reconcile.ts (pure pass/fail rules) + CheckRecorder (named checks + evidence)
 src/reporter/summary.ts    pass/fail matrix (scenario × market × check) → HTML/MD/Job Summary
 tests/e2e/                 the two scenarios      tests/unit/   unit tests (no browser/account needed)
 scripts/discover.ts        records a manual session to learn a new game/market
+scripts/replay.ts          runs the vision pipeline offline over saved frames
 assets/games/<game>/       optional spin.png template + game.json (spinRel fallback)
 ```
 
@@ -62,6 +63,22 @@ open report/summary.html      # pass/fail matrix
 New game or market? `npm run discover -- es` opens a browser, records the game's network
 traffic and screenshots while you spin by hand. Crop the Spin button into
 `assets/games/<gameKey>/spin.png`.
+
+## Verifying the checker
+
+A checker that always says PASS proves nothing, so correctness is shown at four levels:
+
+1. **Unit tests** (`npm run test:unit`): money parsing, network oracle, frame diff, template matching, real OCR.
+2. **Fault injection** (`tests/unit/checks.spec.ts`): every pass/fail rule lives in `src/checks/reconcile.ts`
+   as a pure function and is fed broken observations that must FAIL: balance 1 cent short, win announced but
+   not credited, wallet not updated, displayed wager ≠ wager used, wrong/mixed currency, click without visible
+   reaction, reels that never stop, accepted spin with no balance, message in the wrong language, OCR shown
+   value ≠ expected value.
+3. **Offline replay** (`npm run replay -- discovery/es-<time>`): runs the vision pipeline on saved frames and
+   writes annotated images (balance/bet/win/spin/message boxes) — tune thresholds and templates without an account.
+4. **Live run + negative controls**: each green check in the report is backed by annotated screenshots, video and
+   the provider network log; reconcile manually against the video. Running Scenario 2 with the *funded* account
+   must turn `S2.spin-rejected` red.
 
 ## Secrets & privacy
 

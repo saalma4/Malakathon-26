@@ -4,6 +4,7 @@ import { waitForMotion, waitForStable } from '../../src/vision/frameDiff';
 import { annotate, type Mark } from '../../src/vision/annotate';
 import { formatCents as fmt } from '../../src/util/money';
 import type { AmountHit } from '../../src/vision/ocr';
+import { currencyMatches, reconcile, spinCompleted, spinStarted, wagerMatches } from '../../src/checks/reconcile';
 
 const hitMark = (hit: AmountHit | undefined, label: string, ok = true): Mark[] =>
   hit ? [{ box: hit.line.bbox, label, ok }] : [];
@@ -23,7 +24,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     await checks.check({
       id: 'S1.betsson-currency',
       title: 'Betsson balance is shown in the market currency',
-      pass: betssonBefore?.currency === market.currency.code,
+      pass: currencyMatches(betssonBefore?.currency ? [betssonBefore.currency] : [], market.currency.code),
       expected: market.currency.code,
       actual: betssonBefore ? `${betssonBefore.text} (${betssonBefore.currency ?? '?'})` : 'balance not found in header',
       sources: ['betsson-ui'],
@@ -47,7 +48,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     await checks.check({
       id: 'S1.game-currency',
       title: 'Currency shown inside the game matches the market',
-      pass: pre.currencies.includes(market.currency.code) && pre.currencies.length === 1,
+      pass: currencyMatches(pre.currencies, market.currency.code),
       expected: market.currency.code,
       actual: pre.currencies.join(', ') || 'no currency symbol read on screen',
       sources: ['screen'],
@@ -71,7 +72,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     await checks.check({
       id: 'S1.spin-started',
       title: 'The spin actually started (screen reacted after the click)',
-      pass: motion.moved && (!oracle.detected || spin.requested),
+      pass: spinStarted({ screenMoved: motion.moved, oracleDetected: oracle.detected, spinRequested: spin.requested }),
       expected: 'reels move on screen' + (oracle.detected ? ' + doSpin sent' : ''),
       actual: `peak screen change ${(motion.peakRatio * 100).toFixed(1)}% after ${motion.elapsedMs} ms` + (oracle.detected ? `, doSpin ${spin.requested ? 'sent' : 'NOT sent'}` : ''),
       sources: oracle.detected ? ['screen', 'network'] : ['screen'],
@@ -85,7 +86,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     await checks.check({
       id: 'S1.spin-completed',
       title: 'The spin completed (reels stopped, round settled)',
-      pass: motion.moved && stable.stable && (netSettled ?? true),
+      pass: spinCompleted({ started: motion.moved, screenStill: stable.stable, roundSettled: netSettled }),
       expected: 'screen still again' + (oracle.detected ? ' + round settled (na=s)' : ''),
       actual: `screen ${stable.stable ? 'still' : 'still moving'} after ${stable.elapsedMs} ms` + (oracle.detected ? `, round ${netSettled ? 'settled' : 'NOT settled'}` : ''),
       sources: oracle.detected ? ['screen', 'network'] : ['screen'],
@@ -103,19 +104,20 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     await checks.check({
       id: 'S1.wager',
       title: 'The displayed wager is the wager used for the spin',
-      pass: displayedBet !== undefined && bet !== undefined && displayedBet === bet,
+      pass: wagerMatches(displayedBet, bet),
       expected: `displayed ${money(displayedBet)}`,
       actual: `used ${money(bet)}${spin.betCents !== undefined ? ' (provider request)' : ' (screen)'}`,
       sources: spin.betCents !== undefined ? ['screen', 'network'] : ['screen'],
       evidence: [{ name: 'wager-on-screen', png: await annotate(pre.png, hitMark(seenBet, `BET ${money(displayedBet)}`, displayedBet === bet), 'Wager seen before spin') }],
     });
 
-    const inGameExpected = inGameBefore !== undefined && bet !== undefined ? inGameBefore - bet + payout : undefined;
+    const inGame = reconcile(inGameBefore, bet, payout, inGameAfter);
+    const inGameExpected = inGame.expected;
     const balanceVisible = inGameAfterNet === undefined || !!player.seen(post, inGameAfterNet);
     await checks.check({
       id: 'S1.ingame-balance',
       title: 'In-game balance is consistent with the completed spin',
-      pass: inGameExpected !== undefined && inGameAfter === inGameExpected && balanceVisible,
+      pass: inGame.pass && balanceVisible,
       expected: `${money(inGameBefore)} − ${money(bet)} + ${money(payout)} = ${money(inGameExpected)} (visible on screen)`,
       actual: `${money(inGameAfter)}${balanceVisible ? ' (visible)' : ' (not found on screen by OCR)'}`,
       sources: oracle.detected ? ['screen', 'network'] : ['screen'],
@@ -132,7 +134,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     });
 
     // Betsson balance after: leave the game and let the wallet sync.
-    const betssonExpected = betssonBefore && bet !== undefined ? betssonBefore.cents - bet + payout : undefined;
+    const betssonExpected = reconcile(betssonBefore?.cents, bet, payout, undefined).expected;
     await test.step('Back to lobby', () => betsson.goto('/'));
     const betssonAfter = await test.step('Read Betsson balance after spin', () =>
       betssonExpected !== undefined ? betsson.waitForBalance(betssonExpected, 30_000) : betsson.readBalance(),
@@ -140,7 +142,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     await checks.check({
       id: 'S1.betsson-reconcile',
       title: 'Betsson balance after = before − wager + payout',
-      pass: betssonExpected !== undefined && betssonAfter?.cents === betssonExpected,
+      pass: reconcile(betssonBefore?.cents, bet, payout, betssonAfter?.cents).pass,
       expected: `${money(betssonBefore?.cents)} − ${money(bet)} + ${money(payout)} = ${money(betssonExpected)}`,
       actual: betssonAfter ? `${money(betssonAfter.cents)} (header: ${betssonAfter.text})` : 'balance not found in header',
       sources: ['betsson-ui', ...(oracle.detected ? (['network'] as const) : [])],
