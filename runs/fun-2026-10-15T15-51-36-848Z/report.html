@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Informe de validación</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#14161a;--mut:#626a75;--line:#e3e6ea;--ok:#127a3e;--okbg:#e6f4ec;--ko:#b42318;--kobg:#fdecea}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#171a20;--fg:#eef0f3;--mut:#9aa3ae;--line:#2a2f37;--ok:#4ade80;--okbg:#10291a;--ko:#f87171;--kobg:#2c1414}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+.banner{border-radius:14px;padding:20px 24px;margin-bottom:20px;border:1px solid var(--line);background:var(--card)}
+.banner.ok{background:var(--okbg);border-color:var(--ok)}.banner.ko{background:var(--kobg);border-color:var(--ko)}
+.banner h1{margin:0 0 4px;font-size:26px}.banner.ok h1{color:var(--ok)}.banner.ko h1{color:var(--ko)}
+.meta{color:var(--mut);font-size:14px;word-break:break-all}.err{color:var(--ko);margin-top:6px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+h2{font-size:17px;margin:0 0 12px}h3{font-size:15px;margin:14px 0 8px;display:flex;gap:8px;align-items:center}
+ul{list-style:none;margin:0;padding:0}.check{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.icon{font-weight:700;width:20px;flex:none}.pass .icon{color:var(--ok)}.fail .icon{color:var(--ko)}
+.detail{font-size:13px;color:var(--mut)}.detail span{display:inline-block;min-width:62px;font-weight:600}
+.pill{font-size:12px;border-radius:999px;padding:1px 8px;color:#fff}.pill.ok{background:var(--ok)}.pill.ko{background:var(--ko)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+figure{margin:0}figure img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}figcaption{font-size:13px;color:var(--mut);margin-top:4px}
+video{width:100%;border-radius:10px;background:#000}.steps li{font-size:13px;padding:3px 0;color:var(--mut)}.steps time{font-family:ui-monospace,monospace;color:var(--fg);margin-right:6px}
+a{color:inherit}
+</style></head><body><main>
+<div class="banner ok">
+  <h1>✔ 6/6 comprobaciones OK</h1>
+  <div class="meta">Demo · ES/EUR · juego <b>sweet-bonanza</b> · 1 giro(s) · 121 s · 2026-10-15 15:51:36 UTC</div>
+  <div class="meta">https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20fruitsw&amp;lang=es&amp;cur=EUR&amp;jurisdiction=99&amp;stylename=generic</div>
+  
+</div>
+<div class="grid">
+  <div class="card"><h2>Comprobaciones</h2><section class="spin"><h3>Giro 1 <span class="pill ok">6/6</span></h3><ul><li class="check pass">
+            <span class="icon">✔</span>
+            <div><strong>Moneda en el juego</strong>
+            <div class="detail"><span>esperado</span> EUR</div>
+            <div class="detail"><span>visto</span> EUR</div></div></li><li class="check pass">
+            <span class="icon">✔</span>
+            <div><strong>El giro empezó (la pantalla reaccionó)</strong>
+            <div class="detail"><span>esperado</span> movimiento + doSpin</div>
+            <div class="detail"><span>visto</span> 38.7%, doSpin sí</div></div></li><li class="check pass">
+            <span class="icon">✔</span>
+            <div><strong>El giro terminó</strong>
+            <div class="detail"><span>esperado</span> pantalla quieta + ronda cerrada</div>
+            <div class="detail"><span>visto</span> quieta tras 4998 ms, ronda cerrada</div></div></li><li class="check pass">
+            <span class="icon">✔</span>
+            <div><strong>Apuesta mostrada = apuesta usada</strong>
+            <div class="detail"><span>esperado</span> 2,00 EUR</div>
+            <div class="detail"><span>visto</span> 2,00 EUR</div></div></li><li class="check pass">
+            <span class="icon">✔</span>
+            <div><strong>Saldo en juego = antes − apuesta + premio</strong>
+            <div class="detail"><span>esperado</span> 100.000,00 EUR − 2,00 EUR + 0,00 EUR = 99.998,00 EUR</div>
+            <div class="detail"><span>visto</span> 99.998,00 EUR</div></div></li><li class="check pass">
+            <span class="icon">✔</span>
+            <div><strong>El saldo nuevo se ve en pantalla</strong>
+            <div class="detail"><span>esperado</span> 99.998,00 EUR</div>
+            <div class="detail"><span>visto</span> 99.998,00 EUR leído por OCR</div></div></li></ul></section></div>
+  <div class="card"><h2>Vídeo de la sesión</h2><video controls preload="metadata" src="page@782a5e13d51c0f654b42fdcca02b332a.webm" poster="04-spin1-after.png"></video>
+    <h2 style="margin-top:18px">Pasos</h2><ul class="steps"><li><time>15:51:36</time> Juego: https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20fruitsw&amp;lang=es&amp;cur=EUR&amp;jurisdiction=99&amp;stylename=generic</li><li><time>15:51:36</time> Mercado: Demo · ES/EUR · 1 giro(s)</li><li><time>15:51:37</time> Abriendo el juego…</li><li><time>15:51:42</time> Esperando a que el juego sea jugable (intro cerrada, HUD y botón Spin visibles)…</li><li><time>15:52:36</time> — Giro 1/1 —</li><li><time>15:53:10</time> Lectura en pantalla (OCR): saldo 100.000,00 EUR · apuesta 2,00 EUR · moneda EUR</li><li><time>15:53:10</time> Red del proveedor: saldo 100.000,00 EUR · apuesta 2,00 EUR · Pragmatic detectado</li><li><time>15:53:12</time> Spin localizado por template en (1158, 812)</li><li><time>15:53:16</time> Movimiento detectado: pico 38.7% de píxeles a los 2218 ms</li></ul></div>
+</div>
+<div class="card" style="margin-top:20px"><h2>Capturas (4)</h2><div class="shots"><figure><a href="01-ready.png" target="_blank"><img loading="lazy" src="01-ready.png" alt="Juego listo"></a><figcaption>Juego listo</figcaption></figure><figure><a href="02-spin1-before.png" target="_blank"><img loading="lazy" src="02-spin1-before.png" alt="Giro 1 · antes (lo que se ha leído y dónde está Spin)"></a><figcaption>Giro 1 · antes (lo que se ha leído y dónde está Spin)</figcaption></figure><figure><a href="03-spin1-moving.png" target="_blank"><img loading="lazy" src="03-spin1-moving.png" alt="Giro 1 · rodillos en movimiento (38.7% de píxeles cambiados)"></a><figcaption>Giro 1 · rodillos en movimiento (38.7% de píxeles cambiados)</figcaption></figure><figure><a href="04-spin1-after.png" target="_blank"><img loading="lazy" src="04-spin1-after.png" alt="Giro 1 · después (premio 0,00 EUR)"></a><figcaption>Giro 1 · después (premio 0,00 EUR)</figcaption></figure></div></div>
+<p class="meta">Evidencias: <a href="result.json">result.json</a> · <a href="network.json">network.json</a></p>
+</main></body></html>

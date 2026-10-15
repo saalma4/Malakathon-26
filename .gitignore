@@ -9,4 +9,8 @@ report/
 discovery/
 .cache/
 *.traineddata
-runs/
+# Run evidence stays local, except the two example runs kept in the repo:
+# 17:51 (all checks OK) and 18:01 (forced-failure demo).
+runs/*
+!runs/fun-2026-10-15T15-51-36-848Z/
+!runs/fun-2026-10-15T16-01-06-413Z/

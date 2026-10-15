@@ -1,0 +1,117 @@
+{
+  "id": "fun-2026-10-15T15-51-36-848Z",
+  "url": "https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20fruitsw&lang=es&cur=EUR&jurisdiction=99&stylename=generic",
+  "market": "Demo · ES/EUR",
+  "game": "sweet-bonanza",
+  "spins": 1,
+  "startedAt": "2026-10-15T15:51:36.848Z",
+  "finishedAt": "2026-10-15T15:53:37.816Z",
+  "durationMs": 120968,
+  "passed": 6,
+  "total": 6,
+  "ok": true,
+  "rows": [
+    {
+      "spin": 1,
+      "check": "Moneda en el juego",
+      "pass": true,
+      "expected": "EUR",
+      "actual": "EUR"
+    },
+    {
+      "spin": 1,
+      "check": "El giro empezó (la pantalla reaccionó)",
+      "pass": true,
+      "expected": "movimiento + doSpin",
+      "actual": "38.7%, doSpin sí"
+    },
+    {
+      "spin": 1,
+      "check": "El giro terminó",
+      "pass": true,
+      "expected": "pantalla quieta + ronda cerrada",
+      "actual": "quieta tras 4998 ms, ronda cerrada"
+    },
+    {
+      "spin": 1,
+      "check": "Apuesta mostrada = apuesta usada",
+      "pass": true,
+      "expected": "2,00 EUR",
+      "actual": "2,00 EUR"
+    },
+    {
+      "spin": 1,
+      "check": "Saldo en juego = antes − apuesta + premio",
+      "pass": true,
+      "expected": "100.000,00 EUR − 2,00 EUR + 0,00 EUR = 99.998,00 EUR",
+      "actual": "99.998,00 EUR"
+    },
+    {
+      "spin": 1,
+      "check": "El saldo nuevo se ve en pantalla",
+      "pass": true,
+      "expected": "99.998,00 EUR",
+      "actual": "99.998,00 EUR leído por OCR"
+    }
+  ],
+  "shots": [
+    {
+      "file": "01-ready.png",
+      "title": "Juego listo"
+    },
+    {
+      "file": "02-spin1-before.png",
+      "title": "Giro 1 · antes (lo que se ha leído y dónde está Spin)",
+      "spin": 1
+    },
+    {
+      "file": "03-spin1-moving.png",
+      "title": "Giro 1 · rodillos en movimiento (38.7% de píxeles cambiados)",
+      "spin": 1
+    },
+    {
+      "file": "04-spin1-after.png",
+      "title": "Giro 1 · después (premio 0,00 EUR)",
+      "spin": 1
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-15T15:51:36.849Z",
+      "text": "Juego: https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20fruitsw&lang=es&cur=EUR&jurisdiction=99&stylename=generic"
+    },
+    {
+      "at": "2026-10-15T15:51:36.849Z",
+      "text": "Mercado: Demo · ES/EUR · 1 giro(s)"
+    },
+    {
+      "at": "2026-10-15T15:51:37.132Z",
+      "text": "Abriendo el juego…"
+    },
+    {
+      "at": "2026-10-15T15:51:42.909Z",
+      "text": "Esperando a que el juego sea jugable (intro cerrada, HUD y botón Spin visibles)…"
+    },
+    {
+      "at": "2026-10-15T15:52:36.309Z",
+      "text": "— Giro 1/1 —"
+    },
+    {
+      "at": "2026-10-15T15:53:10.367Z",
+      "text": "Lectura en pantalla (OCR): saldo 100.000,00 EUR · apuesta 2,00 EUR · moneda EUR"
+    },
+    {
+      "at": "2026-10-15T15:53:10.368Z",
+      "text": "Red del proveedor: saldo 100.000,00 EUR · apuesta 2,00 EUR · Pragmatic detectado"
+    },
+    {
+      "at": "2026-10-15T15:53:12.204Z",
+      "text": "Spin localizado por template en (1158, 812)"
+    },
+    {
+      "at": "2026-10-15T15:53:16.528Z",
+      "text": "Movimiento detectado: pico 38.7% de píxeles a los 2218 ms"
+    }
+  ],
+  "video": "page@782a5e13d51c0f654b42fdcca02b332a.webm"
+}
