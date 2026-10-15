@@ -37,9 +37,9 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     const readyPng = await test.step('Wait until the game is playable (vision)', () => player.waitUntilReady());
 
     // 4b. What the player sees before spinning.
-    const pre = await test.step('Read the game screen before spin (OCR)', () => player.readState(readyPng));
     const netBalanceBefore = oracle.lastBalanceCents();
     const netBet = oracle.currentBetCents();
+    const pre = await test.step('Read the game screen before spin (OCR)', () => player.readStateConfirming([netBalanceBefore, netBet], 3, readyPng));
     const seenBet = player.seen(pre, netBet) ?? pre.bet;
     const seenBalanceBefore = player.seen(pre, netBalanceBefore) ?? pre.balance;
     const displayedBet = seenBet?.token.cents;
@@ -65,7 +65,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
     // 6. Did the game react? Did the spin finish?
     const motion = await test.step('Watch reels start moving', () => waitForMotion(player.grab, baseline, { minRatio: 0.04, timeoutMs: 6000 }));
     const netSettled = oracle.detected ? await oracle.waitForSettled(marker, 60_000) : undefined;
-    const stable = await test.step('Watch reels stop (screen still)', () => waitForStable(player.grab, { stableMs: 2500, timeoutMs: 60_000 }));
+    const stable = await test.step('Watch reels stop (screen still)', () => waitForStable(player.grab, { stableMs: 2500, timeoutMs: 60_000, maxRatio: player.assets.stableMaxRatio }));
     const spin = oracle.summarizeSince(marker);
     await checks.log('spin-network.json', spin);
 
@@ -82,7 +82,7 @@ test.describe('Scenario 1 — Completed Real Play spin', () => {
       ],
     });
 
-    const post = await player.readState(stable.frame);
+    const post = await player.readStateConfirming([spin.balanceAfterCents, spin.winCents || undefined], 3, stable.frame);
     await checks.check({
       id: 'S1.spin-completed',
       title: 'The spin completed (reels stopped, round settled)',

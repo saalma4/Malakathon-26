@@ -11,7 +11,8 @@
     "discover": "tsx scripts/discover.ts",
     "typecheck": "tsc",
     "report": "playwright show-report report/playwright",
-    "replay": "tsx scripts/replay.ts"
+    "replay": "tsx scripts/replay.ts",
+    "fun": "tsx scripts/play-fun.ts"
   },
   "repository": {
     "type": "git",

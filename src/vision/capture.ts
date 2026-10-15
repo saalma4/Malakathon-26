@@ -56,11 +56,14 @@ export class GameView {
   }
 }
 
-/** Finds the biggest visible iframe on the page: that's where providers render games. */
+/**
+ * Finds where the game is drawn: the biggest visible iframe (games embedded in
+ * Betsson) or canvas (game page opened directly, e.g. a provider demo).
+ */
 export async function findGameFrame(page: Page, timeoutMs = 60000): Promise<Locator> {
   const end = Date.now() + timeoutMs;
   while (Date.now() < end) {
-    const frames = page.locator('iframe');
+    const frames = page.locator('iframe, canvas');
     const count = await frames.count();
     let best = -1;
     let bestArea = 0;
@@ -78,9 +81,9 @@ export async function findGameFrame(page: Page, timeoutMs = 60000): Promise<Loca
     if (best >= 0) {
       // Tag it so later iframes (chat widgets, trackers) can't shift the index.
       await frames.nth(best).evaluate((el) => el.setAttribute('data-qa-game', '1'));
-      return page.locator('iframe[data-qa-game="1"]');
+      return page.locator('[data-qa-game="1"]');
     }
     await page.waitForTimeout(500);
   }
-  throw new Error('No game iframe appeared on the page');
+  throw new Error('No game iframe/canvas appeared on the page');
 }

@@ -140,13 +140,19 @@ export class PragmaticOracle {
     return undefined;
   }
 
-  /** Waits until the round started at `sinceSeq` is settled (na=s) or timeout. */
-  async waitForSettled(sinceSeq: number, timeoutMs: number): Promise<boolean> {
+  /**
+   * Waits until the round started at `sinceSeq` is settled: next action back
+   * to "s" AND no more provider calls for `quietMs`. The quiet period matters
+   * for tumble games (Sweet Bonanza): the first doSpin already says na=s, then
+   * a free cascade doSpin (na=c) and a doCollect credit the win.
+   */
+  async waitForSettled(sinceSeq: number, timeoutMs: number, quietMs = 2000): Promise<boolean> {
     const end = Date.now() + timeoutMs;
     while (Date.now() < end) {
       const after = this.events.filter((e) => e.seq >= sinceSeq);
       const last = after[after.length - 1];
-      if (after.some((e) => e.action === 'doSpin') && last && last.response.na === 's') return true;
+      const ready = after.some((e) => e.action === 'doSpin') && last?.response.na === 's';
+      if (ready && Date.now() - last.at >= quietMs) return true;
       await new Promise((r) => setTimeout(r, 150));
     }
     return false;

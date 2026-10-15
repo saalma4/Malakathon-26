@@ -49,7 +49,7 @@ export class GamePlayer {
     const end = Date.now() + timeoutMs;
     let blindClicks = 0;
     while (Date.now() < end) {
-      const stable = await waitForStable(this.grab, { stableMs: 2000, timeoutMs: 20000, maxRatio: 0.02 });
+      const stable = await waitForStable(this.grab, { stableMs: 2000, timeoutMs: 20000, maxRatio: Math.max(0.02, this.assets.stableMaxRatio) });
       const png = stable.frame;
       if (await isBlank(png)) continue;
 
@@ -66,13 +66,14 @@ export class GamePlayer {
         continue;
       }
 
-      if (!this.assets.spinTemplate) {
-        const hudVisible = !!findLabeledAmount(screen, this.market.gameLabels.balance, this.market);
-        if (hudVisible || this.oracle.lastBalanceCents() !== undefined) return png;
-      }
+      // The network saying "loaded" is not enough: the player must see the game HUD (e.g. "CRÉDITO 100,00 €").
+      const L = this.market.gameLabels;
+      if (findLabeledAmount(screen, L.balance, this.market) || findLabeledAmount(screen, L.bet, this.market)) return png;
 
-      // "Tap anywhere to start" without readable text: tap the centre a couple of times.
-      if (blindClicks++ < 2) await this.view.clickRel(0.5, 0.5);
+      // Intro without readable text (icon-only "continue" button): tap the centre, then try the Space key.
+      if (blindClicks % 2 === 0) await this.view.clickRel(0.5, 0.5);
+      else await this.view.pressKey('Space');
+      blindClicks++;
     }
     throw new Error('Game did not become playable in time');
   }
@@ -89,6 +90,28 @@ export class GamePlayer {
       bet: findLabeledAmount(screen, L.bet, this.market),
       win: findLabeledAmount(screen, L.win, this.market),
     };
+  }
+
+  /**
+   * Reads the screen until every expected amount is visible (fresh frame each
+   * try: a HUD can be mid-animation or covered for a moment), or tries run out.
+   * Returns the attempt that confirmed the most values.
+   */
+  async readStateConfirming(expected: Array<Cents | undefined>, tries = 3, firstPng?: Buffer): Promise<ScreenState> {
+    const wanted = expected.filter((c): c is Cents => c !== undefined);
+    let best: ScreenState | undefined;
+    let bestHits = -1;
+    for (let i = 0; i < tries; i++) {
+      const state = await this.readState(i === 0 ? firstPng : undefined);
+      const hits = wanted.filter((c) => this.seen(state, c)).length;
+      if (hits > bestHits) {
+        best = state;
+        bestHits = hits;
+      }
+      if (hits === wanted.length) break;
+      await this.view.page.waitForTimeout(700);
+    }
+    return best!;
   }
 
   /** Confirms an expected amount is visible on screen. */

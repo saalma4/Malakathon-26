@@ -79,11 +79,13 @@ export interface GameAssets {
   spinRel?: { x: number; y: number };
   /** Max template score accepted as "found". */
   maxScore: number;
+  /** Frame-to-frame change still counted as "still" (games with idle animations need more). */
+  stableMaxRatio: number;
 }
 
 /**
  * assets/games/<gameKey>/spin.png      cropped spin button (optional)
- * assets/games/<gameKey>/game.json     { "spinRel": {"x":0.9,"y":0.5}, "maxScore": 0.12 } (optional)
+ * assets/games/<gameKey>/game.json     { "spinRel": {"x":0.9,"y":0.5}, "maxScore": 0.12, "stableMaxRatio": 0.01 } (optional)
  */
 export function loadGameAssets(gameKey: string): GameAssets {
   const dir = path.resolve('assets/games', gameKey);
@@ -95,5 +97,6 @@ export function loadGameAssets(gameKey: string): GameAssets {
     spinTemplate: fs.existsSync(spinPath) ? fs.readFileSync(spinPath) : undefined,
     spinRel: cfg.spinRel,
     maxScore: cfg.maxScore ?? 0.12,
+    stableMaxRatio: cfg.stableMaxRatio ?? 0.01,
   };
 }

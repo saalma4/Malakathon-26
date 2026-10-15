@@ -60,6 +60,18 @@ npm run report                # full Playwright report (video, screenshots)
 open report/summary.html      # pass/fail matrix
 ```
 
+### Try it live on a real game (play for fun, no real money)
+
+```bash
+./play.sh demo            # Pragmatic Play public demo (Sweet Bonanza, ES/EUR): no login needed
+./play.sh                 # Bubble Up on betsson.es (play for fun; Spain requires login: .env or by hand, once)
+./play.sh <url> --spins=3 --game=sweet-bonanza --headless
+```
+
+It plays like a person (finds Spin on screen, spins, watches the reels, reads the HUD with OCR) and prints
+PASS/FAIL per check, saving video, annotated screenshots and the provider network log to `runs/`.
+Verified on the Pragmatic demo: 18/18 checks over 3 consecutive spins, including a tumble win.
+
 New game or market? `npm run discover -- es` opens a browser, records the game's network
 traffic and screenshots while you spin by hand. Crop the Spin button into
 `assets/games/<gameKey>/spin.png`.

@@ -41,6 +41,17 @@ test.describe('pragmatic oracle', () => {
     expect(s).toMatchObject({ settled: true, betCents: 20, winCents: 150, balanceAfterCents: 10130, payoutCents: 150 });
   });
 
+  test('tumble game (real Sweet Bonanza sequence): one paid spin, cascade, collect', () => {
+    const events = [
+      ev(0, 'doInit', 'action=doInit', 'balance=100,000.00&c=0.10&l=20&na=s'),
+      ev(1, 'doSpin', 'action=doSpin&c=0.1&l=20', 'balance=99,998.00&tw=1.80&w=1.80&na=s&c=0.10&l=20'),
+      ev(2, 'doSpin', 'action=doSpin&c=0.1&l=20', 'balance=99,998.00&tw=1.80&w=0.00&na=c&c=0.10&l=20'),
+      ev(3, 'doCollect', 'action=doCollect', 'balance=99,999.80&na=s'),
+    ];
+    const s = summarizeSpin(events, 1, 10000000);
+    expect(s).toMatchObject({ settled: true, betCents: 200, winCents: 180, balanceAfterCents: 9999980, payoutCents: 180 });
+  });
+
   test('rejected spin', () => {
     const events = [ev(5, 'doSpin', 'action=doSpin&c=0.01&l=20', 'frozen=Internal server error&msg_code=11')];
     const s = summarizeSpin(events, 5, 0);

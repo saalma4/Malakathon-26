@@ -84,10 +84,16 @@ export interface AmountHit {
   token: MoneyToken;
 }
 
+/**
+ * A token that really looks like money ("2,00", "€2", "100.000,00 €"), not a
+ * stray digit read from a symbol ("2" inside "x2" would otherwise "confirm" 2,00).
+ */
+const looksLikeMoney = (t: MoneyToken) => !!t.currency || /[.,]\d{2}$/.test(t.text);
+
 /** Looks for a specific amount anywhere on screen. */
 export function findAmount(screen: ScreenText, cents: Cents, market: Market): AmountHit | undefined {
   for (const line of screen.lines) {
-    const token = extractAmounts(line.text, market).find((t) => t.cents === cents);
+    const token = extractAmounts(line.text, market).find((t) => t.cents === cents && looksLikeMoney(t));
     if (token) return { line, token };
   }
   return undefined;
