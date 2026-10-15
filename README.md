@@ -120,7 +120,16 @@ el registro de peticiones web, `result.json` y `report.html`.
 
 ### Demostración de fallos
 
-Para ver cómo se presentan los fallos, se elige *Demo fallos · Sweet Bonanza (ES/EUR)* en la interfaz, o desde la terminal:
+Esta demo tiene dos objetivos:
+
+- **Mostrar cómo se presentan los fallos.** Con un juego que funciona correctamente todas las comprobaciones pasan, así
+  que esta demo permite ver cómo se indican un fallo en la interfaz y en el informe: resultado en rojo, valor esperado
+  frente al observado y capturas de evidencia.
+- **Demostrar que el validador detecta errores reales (control negativo).** Una herramienta que siempre diera PASS no
+  probaría nada. Si se simula una integración rota y las comprobaciones afectadas fallan, queda demostrado que el
+  validador distingue un juego correcto de uno defectuoso. Por eso el workflow de CI la ejecuta en cada push y exige que falle.
+
+Se elige *Demo fallos · Sweet Bonanza (ES/EUR)* en la interfaz, o desde la terminal:
 
 ```bash
 npm run fun -- demo-fallos --headless
