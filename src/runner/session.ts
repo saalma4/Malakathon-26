@@ -31,7 +31,7 @@ export const TARGETS: Record<string, { url: string; game: string; label: string;
   'demo-fallos': {
     url: 'https://demogamesfree.pragmaticplay.net/gs2c/openGame.do?gameSymbol=vs20fruitsw&lang=es&cur=EUR&jurisdiction=99&stylename=generic',
     game: 'sweet-bonanza',
-    label: 'Demo con fallos forzados (para ver cómo se muestran los fallos)',
+    label: 'Demo fallos · Sweet Bonanza (ES/EUR)',
     fault: true,
   },
   betsson: {

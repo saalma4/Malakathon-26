@@ -67,7 +67,7 @@ Cada giro tarda aproximadamente entre 1 y 2 minutos. El servidor se detiene con 
 
 ### Demostración de fallos
 
-Para ver cómo se presentan los fallos, en **Juego** se selecciona *Demo con fallos forzados*. Desde la terminal:
+Para ver cómo se presentan los fallos, en **Juego** se selecciona *Demo fallos · Sweet Bonanza (ES/EUR)*. Desde la terminal:
 `npm run fun -- demo-fallos --headless`.
 
 El juego se ejecuta de verdad, pero se simula una integración rota: el mercado espera otra moneda y el proveedor cobra
