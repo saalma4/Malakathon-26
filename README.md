@@ -8,6 +8,10 @@ los rodillos, lee los valores mostrados y comprueba que el saldo cuadra:
 
 Todo se ejecuta en local y sin coste: no se utilizan APIs de inteligencia artificial de pago.
 
+> **Rama [`v2.0`](https://github.com/saalma4/Malakathon-26/tree/v2.0) (experimental, en pruebas):** pruebas por proveedor
+> con plantilla, varios juegos por ejecución y pruebas de subir y bajar la apuesta. Está incompleta. Ver
+> [Rama v2.0](#rama-v20-en-pruebas).
+
 ---
 
 ## Índice
@@ -32,6 +36,7 @@ Todo se ejecuta en local y sin coste: no se utilizan APIs de inteligencia artifi
 9. [Estructura del código](#estructura-del-código)
 10. [Limitaciones](#limitaciones)
 11. [Solución de problemas](#solución-de-problemas)
+12. [Rama v2.0 (en pruebas)](#rama-v20-en-pruebas)
 
 ---
 
@@ -336,3 +341,28 @@ assets/games/<juego>/       plantilla del botón Spin y umbrales calibrados
 | `Game did not become playable in time` | Ejecutar con `DEBUG_VISION=1` y revisar `runs/debug-ready.png` |
 | `Spin localizado por config` o `keyboard` | No hay plantilla del botón o no coincide: crearla o recalibrarla |
 | Avisos `Fontconfig warning` o `BEWARE` | Son informativos y no afectan al funcionamiento |
+
+---
+
+## Rama v2.0 (en pruebas)
+
+[`v2.0`](https://github.com/saalma4/Malakathon-26/tree/v2.0) es una rama **independiente** (no se ha fusionado con
+`main`) con una línea de trabajo alternativa. **Está incompleta y en pruebas**, y `main` sigue siendo la versión estable.
+
+| | `main` | `v2.0` |
+|---|---|---|
+| Selección | Un juego (demo de Sweet Bonanza, Bubble Up o una URL) y el número de giros | Proveedor (solo los que tienen plantilla) y selección múltiple de sus juegos de Betsson Casino (catálogo público de Betsson) |
+| Varios juegos | No | Sí, uno tras otro, con un informe por juego (pruebas pasadas y no pasadas, detalle al pulsar) |
+| Localización del HUD | Plantilla del botón Spin por juego y OCR de las etiquetas | Plantilla por proveedor (`templates/<Proveedor>.png`: crédito, apuesta, Spin, + y −), común a todos sus juegos y buscada a cualquier tamaño |
+| Añadir soporte | Plantilla y calibración por juego | Botón "Añadir proveedor": la captura del HUD se analiza y se guarda como plantilla (`.png` + `.json`) |
+| Pruebas | Escenarios 1 y 2, y demo de fallos forzados | Estructura del HUD y moneda; **aumento** y **resta de apuesta**: + / − cambian la apuesta en pantalla, giro de prueba y crédito = inicial − apuesta + premio, en pantalla y en `gameService` |
+| Navegador | Playwright headless, con vídeo | El Chrome del usuario (sesión iniciada a mano), sin vídeo |
+| Dinero real | — | Solo pulsa si el juego se sirve desde el servidor de demo del proveedor |
+| Base | Actual | Una versión anterior: no tiene el escenario 1 compartido, las protecciones del servidor ni el CI con demo en vivo de `main` |
+
+**Estado:**
+- 41 tests unitarios pasan.
+- En vivo solo se ha probado Helios Triple Sun:
+  - la estructura y el aumento de apuesta pasan;
+  - en la resta de apuesta el giro no llega a empezar, por una causa aún sin resolver.
+- Solo existe la plantilla de Pragmatic Play.
